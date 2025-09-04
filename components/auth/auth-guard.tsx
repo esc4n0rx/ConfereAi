@@ -24,9 +24,6 @@ export function AuthGuard({ children, requireAuth = true }: AuthGuardProps) {
         if (sessionData) {
           try {
             const session = JSON.parse(sessionData)
-            console.log("[v0] AuthGuard - Session parsed:", session.user?.email)
-            console.log("[v0] AuthGuard - Session expires at:", new Date(session.expiresAt))
-            console.log("[v0] AuthGuard - Current time:", new Date())
           } catch (e) {
             console.log("[v0] AuthGuard - Error parsing session:", e)
           }
