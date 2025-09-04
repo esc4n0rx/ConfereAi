@@ -5,7 +5,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
-import { LayoutDashboard, Package, Users, ClipboardList, BarChart3, Settings, LogOut } from "lucide-react"
+import { LayoutDashboard, Package, Users, BarChart3, Settings, LogOut } from "lucide-react"
 import { AuthService } from "@/lib/auth"
 import { useRouter } from "next/navigation"
 
@@ -24,11 +24,6 @@ const navigation = [
     name: "Funcionários",
     href: "/admin/employees",
     icon: Users,
-  },
-  {
-    name: "Histórico",
-    href: "/admin/history",
-    icon: ClipboardList,
   },
   {
     name: "Relatórios",

@@ -8,8 +8,10 @@ import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Input } from "@/components/ui/input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { 
-  ClipboardList, 
+  History,
   Eye, 
   Calendar, 
   User, 
@@ -20,21 +22,30 @@ import {
   Loader2,
   ZoomIn,
   Download,
-  X
+  X,
+  Search
 } from "lucide-react"
 import { PhotoViewer } from "./photo-viewer"
 import type { ChecklistData } from "@/lib/types"
 
 export function ChecklistReports() {
   const [checklists, setChecklists] = useState<ChecklistData[]>([])
+  const [filteredChecklists, setFilteredChecklists] = useState<ChecklistData[]>([])
   const [selectedChecklist, setSelectedChecklist] = useState<ChecklistData | null>(null)
   const [selectedPhotoIndex, setSelectedPhotoIndex] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
+  const [searchTerm, setSearchTerm] = useState("")
+  const [actionFilter, setActionFilter] = useState("all")
+  const [statusFilter, setStatusFilter] = useState("all")
 
   useEffect(() => {
     loadChecklists()
   }, [])
+
+  useEffect(() => {
+    filterChecklists()
+  }, [checklists, searchTerm, actionFilter, statusFilter])
 
   const loadChecklists = async () => {
     try {
@@ -45,16 +56,43 @@ export function ChecklistReports() {
       const result = await response.json()
 
       if (!response.ok) {
-        throw new Error(result.error || 'Erro ao carregar checklists')
+        throw new Error(result.error || 'Erro ao carregar histórico')
       }
 
       setChecklists(result.checklists || [])
     } catch (err: any) {
-      console.error('Erro ao carregar checklists:', err)
-      setError(err.message || 'Erro ao carregar checklists')
+      console.error('Erro ao carregar histórico:', err)
+      setError(err.message || 'Erro ao carregar histórico')
     } finally {
       setLoading(false)
     }
+  }
+
+  const filterChecklists = () => {
+    let filtered = checklists
+
+    // Filtro por termo de busca
+    if (searchTerm) {
+      filtered = filtered.filter(checklist => 
+        checklist.employee.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        checklist.equipment.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        checklist.codigo.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+    }
+
+    // Filtro por ação
+    if (actionFilter !== 'all') {
+      filtered = filtered.filter(checklist => checklist.action === actionFilter)
+    }
+
+    // Filtro por status
+    if (statusFilter === 'with_issues') {
+      filtered = filtered.filter(checklist => checklist.has_issues)
+    } else if (statusFilter === 'normal') {
+      filtered = filtered.filter(checklist => !checklist.has_issues)
+    }
+
+    setFilteredChecklists(filtered)
   }
 
   const getActionBadge = (action: 'taking' | 'returning') => {
@@ -103,7 +141,7 @@ export function ChecklistReports() {
         <CardContent className="flex items-center justify-center py-8">
           <div className="text-center">
             <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4" />
-            <p>Carregando checklists...</p>
+            <p>Carregando histórico completo...</p>
           </div>
         </CardContent>
       </Card>
@@ -115,8 +153,8 @@ export function ChecklistReports() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <ClipboardList className="h-5 w-5" />
-            Checklists Realizados ({checklists.length})
+            <History className="h-5 w-5" />
+            Histórico Completo de Atividades ({filteredChecklists.length})
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -127,7 +165,40 @@ export function ChecklistReports() {
             </Alert>
           )}
 
-          <div className="rounded-md border">
+          {/* Filtros */}
+          <div className="flex flex-col sm:flex-row gap-4 mb-6">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <Input
+                placeholder="Buscar por funcionário, equipamento ou código..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <Select value={actionFilter} onValueChange={setActionFilter}>
+              <SelectTrigger className="w-full sm:w-[140px]">
+                <SelectValue placeholder="Ação" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas ações</SelectItem>
+                <SelectItem value="taking">Retiradas</SelectItem>
+                <SelectItem value="returning">Devoluções</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-full sm:w-[140px]">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos status</SelectItem>
+                <SelectItem value="normal">Normal</SelectItem>
+                <SelectItem value="with_issues">Com problemas</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="rounded-md border overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -138,18 +209,21 @@ export function ChecklistReports() {
                   <TableHead>Status</TableHead>
                   <TableHead>Fotos</TableHead>
                   <TableHead>Data/Hora</TableHead>
-                  <TableHead className="w-32">Ações</TableHead>
+                  <TableHead>Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {checklists.length === 0 ? (
+                {filteredChecklists.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                      Nenhum checklist realizado ainda.
+                      {checklists.length === 0 
+                        ? "Nenhuma atividade registrada ainda."
+                        : "Nenhuma atividade encontrada com os filtros aplicados."
+                      }
                     </TableCell>
                   </TableRow>
                 ) : (
-                  checklists.map((checklist) => (
+                  filteredChecklists.map((checklist) => (
                     <TableRow key={checklist.id}>
                       <TableCell className="font-mono text-xs">
                         {checklist.codigo}
@@ -196,238 +270,129 @@ export function ChecklistReports() {
               </TableBody>
             </Table>
           </div>
+
+          {filteredChecklists.length > 0 && (
+            <div className="mt-4 text-sm text-muted-foreground">
+              Mostrando {filteredChecklists.length} de {checklists.length} registro(s)
+            </div>
+          )}
         </CardContent>
       </Card>
 
-      {/* Dialog para visualizar detalhes do checklist */}
+      {/* Dialog para visualizar detalhes */}
       <Dialog open={!!selectedChecklist} onOpenChange={() => setSelectedChecklist(null)}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <ClipboardList className="w-5 h-5" />
-              Detalhes do Checklist - {selectedChecklist?.codigo}
+              <Package className="h-5 w-5" />
+              Detalhes do Checklist
             </DialogTitle>
           </DialogHeader>
-          
+
           {selectedChecklist && (
-            <div className="space-y-6">
-              {/* Informações Básicas */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm flex items-center gap-2">
-                      <User className="w-4 h-4" />
-                      Funcionário
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-1">
-                      <p className="font-medium">{selectedChecklist.employee.nome}</p>
-                      <p className="text-sm text-gray-600">{selectedChecklist.employee.cargo}</p>
-                      <p className="text-xs text-gray-500">
-                        Mat.: {selectedChecklist.employee.matricula}
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm flex items-center gap-2">
-                      <Package className="w-4 h-4" />
-                      Equipamento
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-1">
-                      <p className="font-medium">{selectedChecklist.equipment.nome}</p>
-                      <p className="text-sm text-gray-600">{selectedChecklist.equipment.descricao}</p>
-                      <p className="text-xs text-gray-500">
-                        Cód.: {selectedChecklist.equipment.codigo}
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-
-              {/* Ação e Status */}
-              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                <div className="flex items-center gap-4">
-                  <div>
-                    <p className="text-sm text-gray-600">Ação</p>
-                    {getActionBadge(selectedChecklist.action)}
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-600">Status</p>
-                    {getStatusBadge(selectedChecklist.has_issues)}
-                  </div>
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Código</label>
+                  <p className="font-mono text-sm">{selectedChecklist.codigo}</p>
                 </div>
-                <div className="text-right">
-                  <p className="text-sm text-gray-600">Data/Hora</p>
-                  <p className="text-sm font-mono">
-                    {formatDate(selectedChecklist.device_timestamp)}
-                  </p>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Data/Hora</label>
+                  <p className="text-sm">{formatDate(selectedChecklist.device_timestamp)}</p>
                 </div>
               </div>
 
-              {/* Respostas do Checklist */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-sm">Verificações Realizadas</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {Object.keys(selectedChecklist.checklist_responses).length > 0 ? (
-                    <div className="space-y-2">
-                      {Object.entries(selectedChecklist.checklist_responses).map(([key, value]) => (
-                        <div key={key} className="flex items-center justify-between">
-                          <span className="text-sm">{key}</span>
-                          <Badge variant={value ? "default" : "destructive"}>
-                            {value ? "✓ OK" : "✗ Problema"}
-                          </Badge>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-sm text-gray-600 italic">
-                      Nenhuma verificação específica foi configurada.
-                    </p>
-                  )}
-                </CardContent>
-              </Card>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Funcionário</label>
+                  <div>
+                    <p className="font-medium">{selectedChecklist.employee.nome}</p>
+                    <p className="text-sm text-gray-500">{selectedChecklist.employee.cargo}</p>
+                  </div>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Equipamento</label>
+                  <div>
+                    <p className="font-medium">{selectedChecklist.equipment.nome}</p>
+                    <p className="text-sm text-gray-500">{selectedChecklist.equipment.codigo}</p>
+                  </div>
+                </div>
+              </div>
 
-              {/* Observações */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Ação</label>
+                  <div>{getActionBadge(selectedChecklist.action)}</div>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Status</label>
+                  <div>{getStatusBadge(selectedChecklist.has_issues)}</div>
+                </div>
+              </div>
+
+              {selectedChecklist.checklist_responses && (
+                <div>
+                  <label className="text-sm font-medium text-gray-500 mb-2 block">Respostas do Checklist</label>
+                  <div className="bg-gray-50 p-3 rounded-lg">
+                    <pre className="text-sm whitespace-pre-wrap">
+                      {JSON.stringify(selectedChecklist.checklist_responses, null, 2)}
+                    </pre>
+                  </div>
+                </div>
+              )}
+
               {selectedChecklist.observations && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-sm">Observações</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm whitespace-pre-wrap">
-                      {selectedChecklist.observations}
-                    </p>
-                  </CardContent>
-                </Card>
-              )}
+                <div>
+                  <label className="text-sm font-medium text-gray-500 mb-2 block">Observações</label>
+                  <p className="text-sm bg-gray-50 p-3 rounded-lg">{selectedChecklist.observations}</p>
+               </div>
+             )}
 
-              {/* Fotos */}
-              {selectedChecklist.photos && selectedChecklist.photos.length > 0 && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-sm flex items-center gap-2">
-                      <ImageIcon className="w-4 h-4" />
-                      Fotos ({selectedChecklist.photos.length})
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                      {selectedChecklist.photos.map((photo, index) => (
-                        <PhotoThumbnail
-                          key={photo.id}
-                          photo={photo}
-                          index={index}
-                          checklistCode={selectedChecklist.codigo}
-                          onClick={() => openPhotoViewer(index)}
-                        />
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+             {selectedChecklist.photos && selectedChecklist.photos.length > 0 && (
+               <div>
+                 <label className="text-sm font-medium text-gray-500 mb-2 block">
+                   Fotos ({selectedChecklist.photos.length})
+                 </label>
+                 <div className="grid grid-cols-3 gap-2">
+                   {selectedChecklist.photos.map((photo, index) => (
+                     <div key={photo.id} className="relative aspect-square">
+                       <img
+                         src={photo.photo_url}
+                         alt={`Foto ${index + 1}`}
+                         className="w-full h-full object-cover rounded-lg cursor-pointer hover:opacity-80 transition-opacity"
+                         onClick={() => openPhotoViewer(index)}
+                       />
+                       <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-0 hover:bg-opacity-20 transition-all rounded-lg">
+                         <ZoomIn className="w-6 h-6 text-white opacity-0 hover:opacity-100 transition-opacity" />
+                       </div>
+                     </div>
+                   ))}
+                 </div>
+               </div>
+             )}
+           </div>
+         )}
+       </DialogContent>
+     </Dialog>
 
-      {/* Photo Viewer */}
-      {selectedChecklist && selectedPhotoIndex !== null && (
-        <PhotoViewer
-          photos={selectedChecklist.photos}
-          initialIndex={selectedPhotoIndex}
-          checklistCode={selectedChecklist.codigo}
-          onClose={closePhotoViewer}
-        />
-      )}
-    </>
-  )
-}
-
-// Componente para thumbnail das fotos
-interface PhotoThumbnailProps {
-  photo: { id: string; photo_url: string; photo_type: string; created_at: string }
-  index: number
-  checklistCode: string
-  onClick: () => void
-}
-
-function PhotoThumbnail({ photo, index, checklistCode, onClick }: PhotoThumbnailProps) {
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(false)
-  const [imageUrl, setImageUrl] = useState<string | null>(null)
-
-  useEffect(() => {
-    loadImage()
-  }, [photo.photo_url])
-
-  const loadImage = async () => {
-    try {
-      setLoading(true)
-      setError(false)
-
-      // Extrair folder e filename da URL da foto
-      const url = new URL(photo.photo_url)
-      const pathParts = url.pathname.split('/')
-      const folder = pathParts[pathParts.length - 2]
-      const filename = pathParts[pathParts.length - 1]
-
-      const response = await fetch(`/api/photos/${folder}/${filename}`)
-      
-      if (!response.ok) {
-        throw new Error('Erro ao carregar imagem')
-      }
-
-      const blob = await response.blob()
-      const imageUrl = URL.createObjectURL(blob)
-      setImageUrl(imageUrl)
-    } catch (err) {
-      console.error('Erro ao carregar thumbnail:', err)
-      setError(true)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  if (loading) {
-    return (
-      <div className="relative aspect-square bg-gray-100 rounded-lg border flex items-center justify-center">
-        <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
-      </div>
-    )
-  }
-
-  if (error || !imageUrl) {
-    return (
-      <div className="relative aspect-square bg-gray-100 rounded-lg border flex items-center justify-center cursor-pointer hover:bg-gray-200">
-        <div className="text-center">
-          <ImageIcon className="w-6 h-6 text-gray-400 mx-auto mb-1" />
-          <p className="text-xs text-gray-500">Erro ao carregar</p>
-        </div>
-      </div>
-    )
-  }
-
-  return (
-    <div className="relative aspect-square group cursor-pointer" onClick={onClick}>
-      <img
-        src={imageUrl}
-        alt={`Foto ${index + 1}`}
-        className="w-full h-full object-cover rounded-lg border hover:border-blue-500 transition-colors"
-      />
-      <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-opacity rounded-lg flex items-center justify-center">
-        <ZoomIn className="w-6 h-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
-      </div>
-      <div className="absolute bottom-2 left-2 bg-black bg-opacity-75 text-white text-xs px-2 py-1 rounded">
-        {index + 1}
-      </div>
-    </div>
-  )
+     {/* Photo Viewer */}
+     {selectedChecklist && selectedPhotoIndex !== null && (
+       <PhotoViewer
+         photos={selectedChecklist.photos || []}
+         currentIndex={selectedPhotoIndex}
+         onClose={closePhotoViewer}
+         onNext={() => {
+           if (selectedChecklist.photos && selectedPhotoIndex < selectedChecklist.photos.length - 1) {
+             setSelectedPhotoIndex(selectedPhotoIndex + 1)
+           }
+         }}
+         onPrevious={() => {
+           if (selectedPhotoIndex > 0) {
+             setSelectedPhotoIndex(selectedPhotoIndex - 1)
+           }
+         }}
+       />
+     )}
+   </>
+ )
 }

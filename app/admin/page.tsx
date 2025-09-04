@@ -1,3 +1,4 @@
+// app/admin/page.tsx
 import { StatsCards } from "@/components/admin/stats-cards"
 import { RecentActivity } from "@/components/admin/recent-activity"
 import { ChecklistLinks } from "@/components/admin/checklist-links"
@@ -14,7 +15,6 @@ export default function AdminDashboard() {
 
       <div className="grid gap-6 lg:grid-cols-2">
         <RecentActivity />
-
         <ChecklistLinks />
       </div>
     </div>
