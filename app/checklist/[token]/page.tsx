@@ -302,7 +302,7 @@ export default function ChecklistPage() {
       </div>
 
       {/* Interface mobile */}
-      <div className="block md:hidden">
+      <div className="block">
         {renderCurrentStep()}
       </div>
 
