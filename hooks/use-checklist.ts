@@ -100,7 +100,7 @@ export function useChecklist() {
       setLoading(true)
       setError(null)
 
-      const response = await fetch(`/api/employees/validate?matricula=${encodeURIComponent(matricula)}`)
+      const response = await fetch(`/api/employees/validate-matricula?matricula=${encodeURIComponent(matricula)}`)
       
       if (!response.ok) {
         const errorData = await response.json()
