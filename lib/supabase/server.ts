@@ -1,9 +1,10 @@
 // lib/supabase/server.ts
-import { createClient } from '@supabase/supabase-js'
+import { createClient, SupabaseClient } from '@supabase/supabase-js' // Importar SupabaseClient
 import { cookies } from 'next/headers'
 import type { Database } from './client'
 
-export function createServerClient() {
+// Adicionar o tipo de retorno explícito aqui
+export function createServerClient(): SupabaseClient<Database> {
   const cookieStore = cookies()
   
   return createClient<Database>(

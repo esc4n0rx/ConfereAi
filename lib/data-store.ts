@@ -1,25 +1,44 @@
 import type { Employee, Equipment, EquipmentChecklist, ChecklistHistory, ChecklistResponse } from "./types"
 import { mockEmployees, mockEquipment, mockChecklists, mockHistory } from "./mock-data"
 
+/**
+ * @deprecated Esta classe está sendo migrada para usar APIs do Supabase.
+ * Use as APIs em /lib/api/ para novas funcionalidades.
+ */
 class DataStore {
   private employees: Employee[] = [...mockEmployees]
   private equipment: Equipment[] = [...mockEquipment]
   private checklists: EquipmentChecklist[] = [...mockChecklists]
   private history: ChecklistHistory[] = [...mockHistory]
 
-  // Employee methods
+  // Employee methods - DEPRECATED: Use EmployeesAPI
+  /**
+   * @deprecated Use EmployeesAPI.getAllEmployees()
+   */
   getEmployees(): Employee[] {
+    console.warn('DataStore.getEmployees() is deprecated. Use EmployeesAPI.getAllEmployees()')
     return this.employees
   }
 
+  /**
+   * @deprecated Use EmployeesAPI.getEmployeeById()
+   */
   getEmployeeById(id: string): Employee | undefined {
+    console.warn('DataStore.getEmployeeById() is deprecated. Use EmployeesAPI.getEmployeeById()')
     return this.employees.find((emp) => emp.id === id)
   }
 
+  /**
+   * @deprecated Use EmployeesAPI.createEmployee()
+   */
   addEmployee(employee: Omit<Employee, "id" | "createdAt" | "updatedAt">): Employee {
+    console.warn('DataStore.addEmployee() is deprecated. Use EmployeesAPI.createEmployee()')
     const newEmployee: Employee = {
       ...employee,
       id: Date.now().toString(),
+      matricula: employee.matricula || Date.now().toString(),
+      nome: employee.nome || employee.name,
+      cargo: employee.cargo || employee.position,
       createdAt: new Date(),
       updatedAt: new Date(),
     }
@@ -27,7 +46,11 @@ class DataStore {
     return newEmployee
   }
 
+  /**
+   * @deprecated Use EmployeesAPI.updateEmployee()
+   */
   updateEmployee(id: string, updates: Partial<Employee>): Employee | null {
+    console.warn('DataStore.updateEmployee() is deprecated. Use EmployeesAPI.updateEmployee()')
     const index = this.employees.findIndex((emp) => emp.id === id)
     if (index === -1) return null
 
@@ -39,7 +62,11 @@ class DataStore {
     return this.employees[index]
   }
 
+  /**
+   * @deprecated Use EmployeesAPI.deleteEmployee()
+   */
   deleteEmployee(id: string): boolean {
+    console.warn('DataStore.deleteEmployee() is deprecated. Use EmployeesAPI.deleteEmployee()')
     const index = this.employees.findIndex((emp) => emp.id === id)
     if (index === -1) return false
 

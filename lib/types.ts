@@ -1,5 +1,16 @@
 export interface Employee {
   id: string
+  matricula: string
+  nome: string
+  cargo: string
+  is_active?: boolean
+  createdAt: Date
+  updatedAt: Date
+}
+
+// Manter compatibilidade com código existente
+export interface Employee {
+  id: string
   name: string
   position: string
   createdAt: Date
@@ -59,3 +70,27 @@ export interface ChecklistHistory {
 
 export type EquipmentStatus = Equipment["status"]
 export type ChecklistAction = ChecklistResponse["action"]
+
+// Novos tipos para API
+export interface DatabaseEmployee {
+  id: string
+  matricula: string
+  nome: string
+  cargo: string
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface CreateEmployeeData {
+  matricula: string
+  nome: string
+  cargo: string
+}
+
+export interface UpdateEmployeeData {
+  matricula?: string
+  nome?: string
+  cargo?: string
+  is_active?: boolean
+}

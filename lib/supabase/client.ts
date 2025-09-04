@@ -54,6 +54,35 @@ export type Database = {
           updated_at?: string
         }
       }
+      confereai_employees: {
+        Row: {
+          id: string
+          matricula: string
+          nome: string
+          cargo: string
+          is_active: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          matricula: string
+          nome: string
+          cargo: string
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          matricula?: string
+          nome?: string
+          cargo?: string
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+      }
     }
   }
 }

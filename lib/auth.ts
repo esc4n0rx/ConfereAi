@@ -107,7 +107,30 @@ export class AuthService {
     return user !== null
   }
 
-  static verifyEmployee(employeeId: string): boolean {
-    return employeeId.length >= 1 && /^\d+$/.test(employeeId)
+  /**
+   * Verificar se matrícula de funcionário existe
+   */
+  static async verifyEmployee(matricula: string): Promise<boolean> {
+    try {
+      if (!matricula || matricula.trim().length === 0) {
+        return false
+      }
+
+      const response = await fetch(`/api/employees/validate-matricula?matricula=${encodeURIComponent(matricula.trim())}`)
+      
+      if (response.status === 404) {
+        return false
+      }
+      
+      if (!response.ok) {
+        return false
+      }
+
+      const result = await response.json()
+      return result.employee !== null
+    } catch (error) {
+      console.error('Error verifying employee:', error)
+      return false
+    }
   }
 }

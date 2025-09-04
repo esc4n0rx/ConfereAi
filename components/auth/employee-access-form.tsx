@@ -9,10 +9,10 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { AuthService } from "@/lib/auth"
+import { EmployeesAPI } from "@/lib/api/employees"
 
 export function EmployeeAccessForm() {
-  const [employeeId, setEmployeeId] = useState("")
+  const [matricula, setMatricula] = useState("")
   const [error, setError] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
@@ -23,15 +23,25 @@ export function EmployeeAccessForm() {
     setIsLoading(true)
 
     try {
-      if (AuthService.verifyEmployee(employeeId)) {
-        // Store employee ID for the session
-        sessionStorage.setItem("employee_id", employeeId)
-        router.push(`/checklist/portal?employee=${employeeId}`)
-      } else {
-        setError("ID do funcionário inválido. Digite apenas números.")
+      if (!matricula.trim()) {
+        setError("Por favor, digite sua matrícula.")
+        return
       }
-    } catch (err) {
-      setError("Erro ao verificar ID. Tente novamente.")
+
+      // Buscar funcionário pela matrícula
+      const employee = await EmployeesAPI.getEmployeeByMatricula(matricula.trim())
+      
+      if (!employee) {
+        setError("Matrícula não encontrada. Verifique se digitou corretamente.")
+        return
+      }
+
+      // Store employee ID for the session
+      sessionStorage.setItem("employee_id", employee.id)
+      router.push(`/checklist/portal?employee=${employee.id}`)
+    } catch (err: any) {
+      console.error('Erro ao verificar matrícula:', err)
+      setError("Erro ao verificar matrícula. Tente novamente.")
     } finally {
       setIsLoading(false)
     }
@@ -42,20 +52,21 @@ export function EmployeeAccessForm() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl font-bold text-primary">Portal de Checklists</CardTitle>
-          <CardDescription>Digite seu ID de funcionário para acessar os checklists de equipamentos</CardDescription>
+          <CardDescription>Digite sua matrícula para acessar os checklists de equipamentos</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="employeeId">ID do Funcionário</Label>
+              <Label htmlFor="matricula">Matrícula do Funcionário</Label>
               <Input
-                id="employeeId"
+                id="matricula"
                 type="text"
-                value={employeeId}
-                onChange={(e) => setEmployeeId(e.target.value)}
-                placeholder="Digite seu ID (ex: 123)"
+                value={matricula}
+                onChange={(e) => setMatricula(e.target.value)}
+                placeholder="Digite sua matrícula (ex: 1001)"
                 required
                 className="text-center text-lg"
+                maxLength={50}
               />
             </div>
             {error && (
@@ -69,9 +80,11 @@ export function EmployeeAccessForm() {
           </form>
           <div className="mt-6 p-4 bg-muted rounded-lg">
             <p className="text-sm text-muted-foreground mb-2">
-              <strong>IDs de teste:</strong>
+              <strong>Para funcionários já cadastrados:</strong>
             </p>
-            <p className="text-xs text-muted-foreground">Use: 1, 2, ou 3 para testar o sistema</p>
+            <p className="text-xs text-muted-foreground">
+              Digite sua matrícula fornecida pelo administrador do sistema para acessar os checklists.
+            </p>
           </div>
         </CardContent>
       </Card>
