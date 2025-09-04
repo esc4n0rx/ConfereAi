@@ -95,84 +95,67 @@ export async function POST(request: NextRequest) {
                 ? photoBase64.split(',')[1] 
                 : photoBase64
 
-              // Validar se é base64 válido
-              if (!base64Data || base64Data.length === 0) {
-                console.error(`Foto ${i + 1} está vazia ou inválida`)
-                continue
-              }
-
-              // Converter base64 para Blob
+              // Converter para Blob
               const byteCharacters = atob(base64Data)
               const byteNumbers = new Array(byteCharacters.length)
-              
               for (let j = 0; j < byteCharacters.length; j++) {
                 byteNumbers[j] = byteCharacters.charCodeAt(j)
               }
-              
               const byteArray = new Uint8Array(byteNumbers)
               const blob = new Blob([byteArray], { type: 'image/jpeg' })
-              
-              // Nome da foto com label descritivo
-              const filename = `${photoLabels[i]}_${Date.now()}.jpg`
+
+              // Adicionar ao FormData
+              const filename = `${photoLabels[i] || `foto_${i + 1}`}.jpg`
               formData.append('files', blob, filename)
-            } catch (photoConvertError) {
-              console.error(`Erro ao converter foto ${i + 1}:`, photoConvertError)
-              continue
+            } catch (conversionError) {
+              console.error(`Erro ao converter foto ${i + 1}:`, conversionError)
+              throw new Error(`Erro ao processar foto ${i + 1}`)
             }
           }
 
-          const uploadResponse = await fetch(
-            `${process.env.UPLOAD_API_URL}/upload/confereai_${checklist.codigo}`,
-            {
-              method: 'POST',
-              headers: {
-                'Authorization': `Bearer ${process.env.UPLOAD_API_TOKEN}`
-              },
-              body: formData
-            }
-          )
+          // Fazer upload
+          const uploadResponse = await fetch(process.env.UPLOAD_API_URL + '/upload', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${process.env.UPLOAD_API_TOKEN}`
+            },
+            body: formData
+          })
 
           if (uploadResponse.ok) {
             const uploadResult = await uploadResponse.json()
-            const files = uploadResult.files || []
-            
-            // Construir URLs das fotos
-            files.forEach((filename: string) => {
-              photoUrls.push(`${process.env.UPLOAD_API_URL}/files/confereai_${checklist.codigo}/${filename}`)
-            })
-
-            // Salvar URLs no banco
-            if (photoUrls.length > 0) {
-              await ChecklistAPI.addPhotosToChecklist(checklist.id, photoUrls)
-            }
+            console.log('Fotos enviadas com sucesso:', uploadResult)
           } else {
-            const uploadError = await uploadResponse.text()
-            console.error('Erro no upload das fotos:', uploadError)
-            // Não falhar a requisição por erro de upload de fotos
+            console.error('Erro no upload das fotos:', await uploadResponse.text())
           }
         }
-      } catch (photoError) {
-        console.error('Erro ao processar fotos:', photoError)
-        // Continuar mesmo se houver erro nas fotos
+      } catch (uploadError) {
+        console.error('Erro no processo de upload:', uploadError)
+        // Não falhar a requisição por erro de upload
       }
     }
 
-    // Atualizar status do equipamento se necessário
-    if (equipment_status && equipment_status !== 'available') {
-      try {
-        await fetch(`/api/equipments/${checklistData.equipment_id}`, {
-          method: 'PATCH',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            status: equipment_status === 'maintenance' ? 'manutencao' : 'disponivel'
-          })
-        })
-      } catch (statusError) {
-        console.error('Erro ao atualizar status do equipamento:', statusError)
-        // Não falhar a requisição por isso
+    // CORREÇÃO PRINCIPAL: Atualizar status do equipamento corretamente
+    try {
+      let newStatus: string
+      
+      if (checklistData.action === 'taking') {
+        // Na retirada: equipamento deve ficar "em_uso"
+        newStatus = 'em_uso'
+      } else if (checklistData.action === 'returning') {
+        // Na devolução: equipamento volta para "disponivel" se estiver OK, ou "manutencao" se tiver problemas
+        newStatus = checklistData.has_issues ? 'manutencao' : 'disponivel'
+      } else {
+        throw new Error('Ação inválida')
       }
+
+      // Atualizar status do equipamento
+      await ChecklistAPI.updateEquipmentStatus(checklistData.equipment_id, newStatus)
+      
+      console.log(`Status do equipamento ${checklistData.equipment_id} atualizado para: ${newStatus}`)
+    } catch (statusError) {
+      console.error('Erro ao atualizar status do equipamento:', statusError)
+      // Não falhar a requisição por isso, mas logar o erro
     }
 
     return NextResponse.json({ 

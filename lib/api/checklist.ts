@@ -5,7 +5,8 @@ import type {
   ChecklistData, 
   DatabaseEmployee, 
   DatabaseEquipment,
-  ChecklistPhoto
+  ChecklistPhoto,
+  CreateChecklistData
 } from '@/lib/types'
 
 export class ChecklistAPI {
@@ -224,28 +225,24 @@ export class ChecklistAPI {
     }
   }
 
-  static async addPhotosToChecklist(checklistId: string, photoUrls: string[]): Promise<ChecklistPhoto[]> {
+  // NOVO MÉTODO: Atualizar status do equipamento
+  static async updateEquipmentStatus(equipmentId: string, status: string): Promise<void> {
     try {
       const supabase = createServerClient()
       
-      const photosData = photoUrls.map(url => ({
-        checklist_id: checklistId,
-        photo_url: url,
-        photo_type: 'checklist'
-      }))
-
-      const { data: photos, error } = await supabase
-        .from('confereai_checklist_photos')
-        .insert(photosData)
-        .select()
+      const { error } = await supabase
+        .from('confereai_equipments')
+        .update({ 
+          status,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', equipmentId)
 
       if (error) {
         throw new Error(error.message)
       }
-
-      return photos || []
     } catch (error) {
-      console.error('Erro ao adicionar fotos ao checklist:', error)
+      console.error('Erro ao atualizar status do equipamento:', error)
       throw error
     }
   }
