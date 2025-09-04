@@ -37,7 +37,7 @@ interface ChecklistFormProps {
   loading: boolean
   onUpdateResponse: (field: string, value: any) => void
   onUpdateObservations: (observations: string) => void
-  onAddPhoto: (photo: File) => void
+  onAddPhoto: (photo: File) => Promise<void> // Modificado para Promise
   onRemovePhoto: (index: number) => void
   onToggleIssue: (hasIssue: boolean) => void
   onSubmit: (isEquipmentReady: boolean) => void
@@ -66,7 +66,7 @@ export function ChecklistForm({
 
   const checklistFields = equipment.checklist_campos || []
 
-  // CORREÇÃO: Melhorar handling de fotos no mobile
+  // Função de captura de fotos agora é assíncrona
   const handlePhotoCapture = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
     if (!files || files.length === 0) return
@@ -76,48 +76,36 @@ export function ChecklistForm({
     for (let i = 0; i < files.length; i++) {
       const file = files[i]
       
-      // Validar tipo de arquivo
       if (!file.type.startsWith('image/')) {
         console.error(`Arquivo ${file.name} não é uma imagem`)
         continue
       }
 
-      // Validar tamanho (máximo 10MB para mobile)
-      if (file.size > 10 * 1024 * 1024) {
-        console.error(`Arquivo ${file.name} muito grande (${file.size} bytes)`)
-        continue
-      }
-
-      // Verificar se não excedeu o limite de fotos
       if (photos.length >= 3) {
         console.warn('Limite de 3 fotos atingido')
         break
       }
 
-      console.log(`Adicionando foto: ${file.name} (${file.size} bytes)`)
-      onAddPhoto(file)
+      console.log(`Adicionando foto: ${file.name}`)
+      await onAddPhoto(file) // Espera a compressão da imagem
     }
 
-    // Reset input para permitir selecionar o mesmo arquivo novamente
     e.target.value = ''
   }
 
   const triggerPhotoCapture = () => {
     if (photos.length >= 3) {
-      return // Não permitir mais fotos
+      return
     }
     
     fileInputRef.current?.click()
   }
 
-  // CORREÇÃO: Validação mais rigorosa
   const canSubmit = () => {
-    // Deve ter exatamente 3 fotos
     if (photos.length !== 3) {
       return false
     }
     
-    // Todos os campos do checklist devem estar preenchidos
     for (const field of checklistFields) {
       if (!responses[field] || responses[field] === '') {
         return false
