@@ -1,12 +1,12 @@
 // app/api/checklist/submit/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import { ChecklistAPI } from '@/lib/api/checklist'
-import type { CreateChecklistData } from '@/lib/types'
+import type { ChecklistData } from '@/lib/types'
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { photos, ...checklistData }: CreateChecklistData & { photos: string[] } = body
+    const { photos, ...checklistData }: ChecklistData & { photos: string[] } = body
 
     // Criar o checklist primeiro
     const checklist = await ChecklistAPI.createChecklist(checklistData)

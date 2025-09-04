@@ -17,13 +17,18 @@ import {
   AlertTriangle,
   CheckCircle,
   ImageIcon,
-  Loader2
+  Loader2,
+  ZoomIn,
+  Download,
+  X
 } from "lucide-react"
+import { PhotoViewer } from "./photo-viewer"
 import type { ChecklistData } from "@/lib/types"
 
 export function ChecklistReports() {
   const [checklists, setChecklists] = useState<ChecklistData[]>([])
   const [selectedChecklist, setSelectedChecklist] = useState<ChecklistData | null>(null)
+  const [selectedPhotoIndex, setSelectedPhotoIndex] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
 
@@ -84,6 +89,14 @@ export function ChecklistReports() {
     setSelectedChecklist(checklist)
   }
 
+  const openPhotoViewer = (photoIndex: number) => {
+    setSelectedPhotoIndex(photoIndex)
+  }
+
+  const closePhotoViewer = () => {
+    setSelectedPhotoIndex(null)
+  }
+
   if (loading) {
     return (
       <Card>
@@ -123,6 +136,7 @@ export function ChecklistReports() {
                   <TableHead>Equipamento</TableHead>
                   <TableHead>Ação</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>Fotos</TableHead>
                   <TableHead>Data/Hora</TableHead>
                   <TableHead className="w-32">Ações</TableHead>
                 </TableRow>
@@ -130,7 +144,7 @@ export function ChecklistReports() {
               <TableBody>
                 {checklists.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                       Nenhum checklist realizado ainda.
                     </TableCell>
                   </TableRow>
@@ -158,6 +172,12 @@ export function ChecklistReports() {
                       <TableCell>
                         {getStatusBadge(checklist.has_issues)}
                       </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1">
+                          <ImageIcon className="w-4 h-4 text-gray-400" />
+                          <span className="text-sm">{checklist.photos?.length || 0}</span>
+                        </div>
+                      </TableCell>
                       <TableCell className="text-xs">
                         {formatDate(checklist.device_timestamp)}
                       </TableCell>
@@ -181,7 +201,7 @@ export function ChecklistReports() {
 
       {/* Dialog para visualizar detalhes do checklist */}
       <Dialog open={!!selectedChecklist} onOpenChange={() => setSelectedChecklist(null)}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <ClipboardList className="w-5 h-5" />
@@ -299,19 +319,15 @@ export function ChecklistReports() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                       {selectedChecklist.photos.map((photo, index) => (
-                        <div key={photo.id} className="relative">
-                          <img
-                            src={photo.photo_url}
-                            alt={`Foto ${index + 1}`}
-                            className="w-full h-32 object-cover rounded-lg border"
-                            onClick={() => window.open(photo.photo_url, '_blank')}
-                          />
-                          <div className="absolute bottom-2 left-2 bg-black bg-opacity-75 text-white text-xs px-2 py-1 rounded">
-                            {index + 1}
-                          </div>
-                        </div>
+                        <PhotoThumbnail
+                          key={photo.id}
+                          photo={photo}
+                          index={index}
+                          checklistCode={selectedChecklist.codigo}
+                          onClick={() => openPhotoViewer(index)}
+                        />
                       ))}
                     </div>
                   </CardContent>
@@ -321,6 +337,97 @@ export function ChecklistReports() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Photo Viewer */}
+      {selectedChecklist && selectedPhotoIndex !== null && (
+        <PhotoViewer
+          photos={selectedChecklist.photos}
+          initialIndex={selectedPhotoIndex}
+          checklistCode={selectedChecklist.codigo}
+          onClose={closePhotoViewer}
+        />
+      )}
     </>
+  )
+}
+
+// Componente para thumbnail das fotos
+interface PhotoThumbnailProps {
+  photo: { id: string; photo_url: string; photo_type: string; created_at: string }
+  index: number
+  checklistCode: string
+  onClick: () => void
+}
+
+function PhotoThumbnail({ photo, index, checklistCode, onClick }: PhotoThumbnailProps) {
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(false)
+  const [imageUrl, setImageUrl] = useState<string | null>(null)
+
+  useEffect(() => {
+    loadImage()
+  }, [photo.photo_url])
+
+  const loadImage = async () => {
+    try {
+      setLoading(true)
+      setError(false)
+
+      // Extrair folder e filename da URL da foto
+      const url = new URL(photo.photo_url)
+      const pathParts = url.pathname.split('/')
+      const folder = pathParts[pathParts.length - 2]
+      const filename = pathParts[pathParts.length - 1]
+
+      const response = await fetch(`/api/photos/${folder}/${filename}`)
+      
+      if (!response.ok) {
+        throw new Error('Erro ao carregar imagem')
+      }
+
+      const blob = await response.blob()
+      const imageUrl = URL.createObjectURL(blob)
+      setImageUrl(imageUrl)
+    } catch (err) {
+      console.error('Erro ao carregar thumbnail:', err)
+      setError(true)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="relative aspect-square bg-gray-100 rounded-lg border flex items-center justify-center">
+        <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+      </div>
+    )
+  }
+
+  if (error || !imageUrl) {
+    return (
+      <div className="relative aspect-square bg-gray-100 rounded-lg border flex items-center justify-center cursor-pointer hover:bg-gray-200">
+        <div className="text-center">
+          <ImageIcon className="w-6 h-6 text-gray-400 mx-auto mb-1" />
+          <p className="text-xs text-gray-500">Erro ao carregar</p>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="relative aspect-square group cursor-pointer" onClick={onClick}>
+      <img
+        src={imageUrl}
+        alt={`Foto ${index + 1}`}
+        className="w-full h-full object-cover rounded-lg border hover:border-blue-500 transition-colors"
+      />
+      <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-opacity rounded-lg flex items-center justify-center">
+        <ZoomIn className="w-6 h-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+      </div>
+      <div className="absolute bottom-2 left-2 bg-black bg-opacity-75 text-white text-xs px-2 py-1 rounded">
+        {index + 1}
+      </div>
+    </div>
   )
 }
