@@ -1,4 +1,3 @@
-// app/checklist/[token]/page.tsx
 "use client"
 
 import { useEffect, useState } from 'react'
@@ -16,7 +15,7 @@ import { Loader2, AlertCircle, Smartphone } from 'lucide-react'
 export default function ChecklistPage() {
   const params = useParams()
   const token = params.token as string
-  
+
   const [tokenValidation, setTokenValidation] = useState<{
     loading: boolean
     valid: boolean | null
@@ -145,8 +144,8 @@ export default function ChecklistPage() {
     switch (state.step) {
       case 'validation':
         return (
-          <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50">
-            <div className="container mx-auto px-4 py-6">
+          <div className="min-h-dvh bg-gradient-to-br from-blue-50 to-purple-50 flex flex-col justify-center items-center p-4">
+            <div className="w-full max-w-md">
               <div className="text-center mb-6">
                 <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-4">
                   <Smartphone className="w-8 h-8 text-blue-600" />
@@ -154,7 +153,7 @@ export default function ChecklistPage() {
                 <h1 className="text-2xl font-bold text-gray-900 mb-2">Checklist de Equipamentos</h1>
                 <p className="text-gray-600">Sistema mobile de controle</p>
               </div>
-              
+
               <EmployeeValidation
                 onValidate={validateEmployee}
                 loading={loading}
