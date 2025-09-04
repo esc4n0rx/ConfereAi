@@ -83,6 +83,105 @@ export type Database = {
           updated_at?: string
         }
       }
+      confereai_equipments: {
+        Row: {
+          id: string
+          nome: string
+          descricao: string
+          codigo: string | null
+          status: 'disponivel' | 'manutencao' | 'quebrado' | 'inativo'
+          checklist_campos: string[]
+          is_active: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          nome: string
+          descricao: string
+          codigo?: string | null
+          status?: 'disponivel' | 'manutencao' | 'quebrado' | 'inativo'
+          checklist_campos?: string[]
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          nome?: string
+          descricao?: string
+          codigo?: string | null
+          status?: 'disponivel' | 'manutencao' | 'quebrado' | 'inativo'
+          checklist_campos?: string[]
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      confereai_checklists: {
+        Row: {
+          id: string
+          codigo: string
+          employee_id: string
+          equipment_id: string
+          action: 'taking' | 'returning'
+          checklist_responses: Record<string, any>
+          observations: string | null
+          has_issues: boolean
+          device_timestamp: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          codigo: string
+          employee_id: string
+          equipment_id: string
+          action: 'taking' | 'returning'
+          checklist_responses?: Record<string, any>
+          observations?: string | null
+          has_issues?: boolean
+          device_timestamp: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          codigo?: string
+          employee_id?: string
+          equipment_id?: string
+          action?: 'taking' | 'returning'
+          checklist_responses?: Record<string, any>
+          observations?: string | null
+          has_issues?: boolean
+          device_timestamp?: string
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      confereai_checklist_photos: {
+        Row: {
+          id: string
+          checklist_id: string
+          photo_url: string
+          photo_type: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          checklist_id: string
+          photo_url: string
+          photo_type?: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          checklist_id?: string
+          photo_url?: string
+          photo_type?: string
+          created_at?: string
+        }
+      }
     }
   }
 }

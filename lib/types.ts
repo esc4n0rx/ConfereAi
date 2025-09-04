@@ -1,4 +1,5 @@
 // lib/types.ts
+// lib/types.ts
 export interface Employee {
   id: string
   matricula: string
@@ -136,4 +137,64 @@ export interface UpdateEquipmentData {
   status?: EquipmentStatusNew
   checklistCampos?: string[]
   is_active?: boolean
+}
+
+// Novos tipos para Checklist Mobile
+export interface ChecklistData {
+  id: string
+  codigo: string
+  employee: DatabaseEmployee
+  equipment: DatabaseEquipment
+  action: 'taking' | 'returning'
+  checklist_responses: Record<string, any>
+  observations: string | null
+  has_issues: boolean
+  device_timestamp: string
+  photos: ChecklistPhoto[]
+  created_at: string
+  updated_at: string
+}
+
+export interface ChecklistPhoto {
+  id: string
+  checklist_id: string
+  photo_url: string
+  photo_type: string
+  created_at: string
+}
+
+export interface ChecklistData {
+  id: string
+  codigo: string
+  employee: DatabaseEmployee
+  equipment: DatabaseEquipment
+  action: 'taking' | 'returning'
+  checklist_responses: Record<string, any>
+  observations: string | null
+  has_issues: boolean
+  device_timestamp: string
+  photos: ChecklistPhoto[]
+  created_at: string
+  updated_at: string
+}
+
+
+
+export interface ChecklistToken {
+  id: string
+  employee_id?: string
+  expires_at: string
+  used: boolean
+  created_at: string
+}
+
+export interface MobileChecklistState {
+  step: 'validation' | 'action' | 'equipment' | 'checklist' | 'success'
+  employee: DatabaseEmployee | null
+  action: 'taking' | 'returning' | null
+  equipment: DatabaseEquipment | null
+  responses: Record<string, any>
+  observations: string
+  photos: File[]
+  hasIssues: boolean
 }
