@@ -74,10 +74,10 @@ export function useChecklist() {
     }))
   }, [])
 
-  const toggleIssue = useCallback((hasIssues: boolean) => {
+  const toggleIssue = useCallback((hasIssue: boolean) => {
     setState(prev => ({
       ...prev,
-      hasIssues
+      hasIssues: hasIssue
     }))
   }, [])
 
@@ -95,39 +95,39 @@ export function useChecklist() {
     setError(null)
   }, [])
 
-  const validateEmployee = async (matricula: string): Promise<boolean> => {
+  const validateEmployee = useCallback(async (matricula: string): Promise<DatabaseEmployee | null> => {
     try {
       setLoading(true)
       setError(null)
 
-      const response = await fetch(`/api/employees/validate-matricula?matricula=${encodeURIComponent(matricula)}`)
-      const result = await response.json()
-
+      const response = await fetch(`/api/employees/validate?matricula=${encodeURIComponent(matricula)}`)
+      
       if (!response.ok) {
-        throw new Error(result.error || 'Funcionário não encontrado')
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Funcionário não encontrado')
       }
 
-      setEmployee(result.employee)
-      return true
+      const result = await response.json()
+      return result.employee
     } catch (err: any) {
       setError(err.message)
-      return false
+      return null
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
-  // Função para converter File para Base64
+  // Função auxiliar para converter File para base64
   const fileToBase64 = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader()
       reader.readAsDataURL(file)
       reader.onload = () => resolve(reader.result as string)
-      reader.onerror = error => reject(error)
+      reader.onerror = (error) => reject(error)
     })
   }
 
-  const submitChecklist = async (): Promise<boolean> => {
+  const submitChecklist = useCallback(async (isEquipmentReady: boolean): Promise<boolean> => {
     try {
       setLoading(true)
       setError(null)
@@ -140,38 +140,57 @@ export function useChecklist() {
       const photoPromises = state.photos.map(photo => fileToBase64(photo))
       const photosBase64 = await Promise.all(photoPromises)
 
+      // Determinar status baseado na confirmação do usuário
+      const equipmentStatus = isEquipmentReady ? 'available' : 'maintenance'
+
+      const payload = {
+        employee_id: state.employee.id,
+        equipment_id: state.equipment.id,
+        action: state.action,
+        checklist_responses: state.responses,
+        observations: state.observations || null,
+        has_issues: state.hasIssues,
+        device_timestamp: new Date().toISOString(),
+        photos: photosBase64,
+        equipment_status: equipmentStatus,
+        is_equipment_ready: isEquipmentReady
+      }
+
       const response = await fetch('/api/checklist/submit', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          employee_id: state.employee.id,
-          equipment_id: state.equipment.id,
-          action: state.action,
-          checklist_responses: state.responses,
-          observations: state.observations || null,
-          has_issues: state.hasIssues,
-          device_timestamp: new Date().toISOString(),
-          photos: photosBase64
-        }),
+        body: JSON.stringify(payload),
       })
 
-      const result = await response.json()
-
       if (!response.ok) {
-        throw new Error(result.error || 'Erro ao submeter checklist')
+        const errorText = await response.text()
+        let errorMessage = 'Erro ao submeter checklist'
+        
+        try {
+          const errorData = JSON.parse(errorText)
+          errorMessage = errorData.error || errorMessage
+        } catch {
+          // Se não conseguir fazer parse do JSON, usar mensagem padrão
+          console.error('Erro de resposta não-JSON:', errorText)
+        }
+        
+        throw new Error(errorMessage)
       }
+
+      const result = await response.json()
 
       setState(prev => ({ ...prev, step: 'success' }))
       return true
     } catch (err: any) {
+      console.error('Erro no submitChecklist:', err)
       setError(err.message)
       return false
     } finally {
       setLoading(false)
     }
-  }
+  }, [state])
 
   return {
     state,

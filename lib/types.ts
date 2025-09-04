@@ -95,6 +95,7 @@ export interface DatabaseEmployee {
   is_active: boolean
   created_at: string
   updated_at: string
+  null: any
 }
 
 export interface DatabaseEquipment {
@@ -197,4 +198,11 @@ export interface MobileChecklistState {
   observations: string
   photos: File[]
   hasIssues: boolean
+}
+
+// Adicionar nova interface para dados de checklist estendidos
+export interface ExtendedChecklistData extends ChecklistData {
+  equipment_status: 'available' | 'maintenance'
+  is_equipment_ready: boolean
+  photos: string[]
 }

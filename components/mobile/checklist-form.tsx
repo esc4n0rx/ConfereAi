@@ -1,3 +1,4 @@
+// components/mobile/checklist-form.tsx
 "use client"
 
 import { useState, useRef } from 'react'
@@ -21,7 +22,8 @@ import {
   Plus,
   FileImage
 } from 'lucide-react'
-import { PhotoGuidanceModal } from './photo-guidance-modal'
+import { PhotoInstructionSection } from './photo-instruction-section'
+import { ConfirmationModal } from './confirmation-modal'
 import type { DatabaseEmployee, DatabaseEquipment } from '@/lib/types'
 
 interface ChecklistFormProps {
@@ -38,7 +40,7 @@ interface ChecklistFormProps {
   onAddPhoto: (photo: File) => void
   onRemovePhoto: (index: number) => void
   onToggleIssue: (hasIssue: boolean) => void
-  onSubmit: () => void
+  onSubmit: (isEquipmentReady: boolean) => void
   onBack: () => void
 }
 
@@ -59,21 +61,10 @@ export function ChecklistForm({
   onSubmit,
   onBack
 }: ChecklistFormProps) {
-  const [showPhotoGuidance, setShowPhotoGuidance] = useState(false)
+  const [showConfirmation, setShowConfirmation] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const checklistFields = equipment.checklist_campos || []
-
-  const handlePhotoClick = () => {
-    setShowPhotoGuidance(true)
-  }
-
-  const handleProceedWithPhotos = () => {
-    setShowPhotoGuidance(false)
-    if (fileInputRef.current) {
-      fileInputRef.current.click()
-    }
-  }
 
   const handlePhotoCapture = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
@@ -87,8 +78,8 @@ export function ChecklistForm({
   }
 
   const canSubmit = () => {
-    // Deve ter pelo menos uma foto
-    if (photos.length === 0) {
+    // Deve ter exatamente 3 fotos (conforme orientações)
+    if (photos.length < 3) {
       return false
     }
     
@@ -104,189 +95,160 @@ export function ChecklistForm({
 
   const getActionBadge = () => {
     return action === 'taking' 
-      ? <Badge className="bg-blue-600 text-white mobile-badge">Retirada</Badge>
-      : <Badge className="bg-green-600 text-white mobile-badge">Devolução</Badge>
+      ? <Badge className="bg-blue-600 border-blue-600">Retirada</Badge>
+      : <Badge className="bg-green-600 border-green-600">Devolução</Badge>
   }
 
-  const getProgress = () => {
-    let completed = 0
-    let total = checklistFields.length + 1 // +1 para fotos
-
-    // Contar campos preenchidos
-    checklistFields.forEach(field => {
-      if (responses[field] && responses[field] !== '') {
-        completed++
-      }
-    })
-
-    // Contar fotos
-    if (photos.length > 0) {
-      completed++
-    }
-
-    return { completed, total, percentage: Math.round((completed / total) * 100) }
+  const handleFinalize = () => {
+    setShowConfirmation(true)
   }
 
-  const progress = getProgress()
+  const handleConfirmSubmit = (isEquipmentReady: boolean) => {
+    setShowConfirmation(false)
+    onSubmit(isEquipmentReady)
+  }
+
+  const getPhotoLabel = (index: number): string => {
+    const labels = [
+      'Número de Série',
+      'Painel do Equipamento', 
+      'Equipamento Completo'
+    ]
+    return labels[index] || `Foto ${index + 1}`
+  }
 
   return (
     <>
-      <div className="mobile-container bg-gray-50">
-        {/* Header fixo com progresso */}
+      <div className="mobile-container">
+        {/* Header fixo */}
         <div className="mobile-header bg-white border-b border-gray-200 p-4">
-          <div className="flex items-center gap-4 mb-3">
-            <Button variant="outline" size="icon" onClick={onBack} className="h-10 w-10">
-              <ArrowLeft className="h-4 w-4" />
+          <div className="flex items-center gap-3">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onBack}
+              className="h-10 w-10"
+            >
+              <ArrowLeft className="h-5 w-5" />
             </Button>
             <div className="flex-1 min-w-0">
-              <h1 className="text-lg font-bold text-gray-900 truncate">Checklist do Equipamento</h1>
-              <p className="text-sm text-gray-600">Preencha todas as informações</p>
+              <div className="flex items-center gap-2">
+                <Package className="h-5 w-5 text-gray-600 flex-shrink-0" />
+                <h1 className="font-semibold text-gray-900 truncate">
+                  {equipment.nome}
+                </h1>
+                {getActionBadge()}
+              </div>
+              <div className="flex items-center gap-1 mt-1">
+                <User className="h-4 w-4 text-gray-500" />
+                <span className="text-sm text-gray-600 truncate">
+                  {employee.nome}
+                </span>
+              </div>
             </div>
-            {getActionBadge()}
           </div>
-
-          {/* Barra de progresso */}
-          <div className="bg-gray-200 rounded-full h-2 mb-2">
-            <div 
-              className="bg-gradient-to-r from-blue-500 to-purple-600 h-2 rounded-full transition-all duration-300"
-              style={{ width: `${progress.percentage}%` }}
-            />
-          </div>
-          <p className="text-xs text-gray-600 text-center">
-            {progress.completed}/{progress.total} itens concluídos ({progress.percentage}%)
-          </p>
         </div>
 
         {/* Conteúdo scrollável */}
-        <div className="mobile-content custom-scrollbar">
+        <div className="mobile-content">
           <div className="p-4 space-y-4">
-            {/* Informações principais */}
-            <Card className="shadow-sm border-gray-200">
-              <CardContent className="p-4">
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2">
-                    <User className="h-4 w-4 text-gray-600" />
-                    <span className="text-sm font-medium text-gray-900">{employee.nome}</span>
-                  </div>
-                  
-                  <div className="flex items-center gap-2">
-                    <Package className="h-4 w-4 text-gray-600" />
-                    <div className="flex-1 min-w-0">
-                      <span className="text-sm font-medium text-gray-900">{equipment.nome}</span>
-                      {equipment.codigo && (
-                        <span className="text-xs text-gray-500 ml-2">({equipment.codigo})</span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            {/* Instruções para fotos */}
+            <PhotoInstructionSection />
 
-            {/* Campos do Checklist */}
-            {checklistFields.length > 0 && (
-              <Card className="shadow-sm border-gray-200">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4" />
-                    Itens de Verificação
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-4 pt-0">
-                  <div className="checklist-compact space-y-4">
-                    {checklistFields.map((field, index) => (
-                      <div key={index} className="space-y-2">
-                        <Label htmlFor={`field-${index}`} className="text-sm font-medium text-gray-700">
-                          {field}
-                        </Label>
-                        <div className="grid grid-cols-2 gap-2">
-                          <Button
-                            variant={responses[field] === 'ok' ? 'default' : 'outline'}
-                            size="sm"
-                            onClick={() => onUpdateResponse(field, 'ok')}
-                            className="h-11 text-sm"
-                          >
-                            <CheckCircle className="h-4 w-4 mr-1" />
-                            OK
-                          </Button>
-                          <Button
-                            variant={responses[field] === 'problema' ? 'destructive' : 'outline'}
-                            size="sm"
-                            onClick={() => onUpdateResponse(field, 'problema')}
-                            className="h-11 text-sm"
-                          >
-                            <AlertTriangle className="h-4 w-4 mr-1" />
-                            Problema
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Fotos */}
+            {/* Seção de fotos */}
             <Card className="shadow-sm border-gray-200">
               <CardHeader className="pb-3">
                 <CardTitle className="text-base flex items-center gap-2">
-                  <Camera className="h-4 w-4" />
+                  <Camera className="h-5 w-5 text-blue-600" />
                   Fotos do Equipamento
-                  <Badge variant="destructive" className="text-xs mobile-badge">Obrigatório</Badge>
+                  <Badge variant={photos.length >= 3 ? "default" : "secondary"}>
+                    {photos.length}/3
+                  </Badge>
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-4 pt-0 space-y-4">
-                {photos.length === 0 && (
+                {photos.length < 3 && (
                   <Alert className="border-orange-200 bg-orange-50">
                     <AlertTriangle className="h-4 w-4 text-orange-600" />
                     <AlertDescription className="text-orange-800">
-                      É obrigatório tirar pelo menos uma foto do equipamento e do número de série.
+                      <strong>Atenção:</strong> Você precisa tirar exatamente 3 fotos para continuar. 
+                      Faltam {3 - photos.length} foto(s).
                     </AlertDescription>
                   </Alert>
                 )}
 
                 <Button
-                  onClick={handlePhotoClick}
+                  onClick={() => fileInputRef.current?.click()}
                   variant="outline"
                   className="w-full h-12 border-2 border-dashed border-blue-300 hover:border-blue-500 hover:bg-blue-50 transition-all duration-200"
                 >
                   <Plus className="h-4 w-4 mr-2" />
-                  {photos.length === 0 ? 'Adicionar Primeira Foto' : 'Adicionar Mais Fotos'}
+                  {photos.length === 0 ? 'Tirar Primeira Foto' : `Tirar ${getPhotoLabel(photos.length)}`}
                 </Button>
 
                 {photos.length > 0 && (
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-3">
                     {photos.map((photo, index) => (
-                      <div key={index} className="relative">
-                        <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden border-2 border-gray-200">
+                      <div key={index} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border">
+                        <div className="w-16 h-16 bg-gray-100 rounded-lg overflow-hidden border-2 border-gray-200 flex-shrink-0">
                           <img
                             src={URL.createObjectURL(photo)}
-                            alt={`Foto ${index + 1}`}
+                            alt={getPhotoLabel(index)}
                             className="w-full h-full object-cover"
                           />
                         </div>
-                        <Button
-                          variant="destructive"
-                          size="icon"
-                          className="absolute -top-2 -right-2 h-7 w-7 rounded-full shadow-md"
-                          onClick={() => onRemovePhoto(index)}
-                        >
-                          <X className="h-3 w-3" />
-                        </Button>
-                        <div className="absolute bottom-1 left-1 bg-black/70 text-white text-xs px-1.5 py-0.5 rounded">
-                          {index + 1}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="text-xs">
+                              {index + 1}
+                            </Badge>
+                            <span className="font-medium text-sm text-gray-900 truncate">
+                              {getPhotoLabel(index)}
+                            </span>
+                          </div>
+                          <p className="text-xs text-gray-600 mt-1">
+                            {(photo.size / 1024).toFixed(1)} KB
+                          </p>
                         </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => onRemovePhoto(index)}
+                          className="h-8 w-8 text-red-600 hover:bg-red-50"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
                       </div>
                     ))}
                   </div>
                 )}
-
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                  <p className="text-xs text-blue-800">
-                    📸 <strong>Fotografe:</strong> número de série, estado geral do equipamento e possíveis danos
-                  </p>
-                </div>
               </CardContent>
             </Card>
+
+            {/* Campos do checklist */}
+            {checklistFields.length > 0 && (
+              <Card className="shadow-sm border-gray-200">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base">Checklist de Verificação</CardTitle>
+                </CardHeader>
+                <CardContent className="p-4 pt-0 space-y-4">
+                  {checklistFields.map((field, index) => (
+                    <div key={field} className="space-y-2">
+                      <Label htmlFor={`field-${index}`} className="text-sm font-medium text-gray-700">
+                        {field}
+                      </Label>
+                      <Input
+                        id={`field-${index}`}
+                        value={responses[field] || ''}
+                        onChange={(e) => onUpdateResponse(field, e.target.value)}
+                        placeholder={`Responda: ${field}`}
+                        className="w-full"
+                      />
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            )}
 
             {/* Observações */}
             <Card className="shadow-sm border-gray-200">
@@ -334,7 +296,7 @@ export function ChecklistForm({
         {/* Footer fixo com botão de envio */}
         <div className="mobile-footer bg-white border-t border-gray-200 p-4">
           <Button
-            onClick={onSubmit}
+            onClick={handleFinalize}
             disabled={!canSubmit() || loading}
             className="w-full h-12 text-base font-medium bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 disabled:from-gray-400 disabled:to-gray-500 transition-all duration-200"
           >
@@ -345,7 +307,7 @@ export function ChecklistForm({
               </>
             ) : (
               <>
-                <Send className="w-4 h-4 mr-2" />
+                <Send className="w-4 w-4 mr-2" />
                 Finalizar Checklist
               </>
             )}
@@ -358,18 +320,20 @@ export function ChecklistForm({
           type="file"
           accept="image/*"
           capture="environment"
-          multiple
           onChange={handlePhotoCapture}
           className="hidden"
         />
       </div>
 
-      {/* Modal de orientações para fotos */}
-      <PhotoGuidanceModal
-        open={showPhotoGuidance}
-        onClose={() => setShowPhotoGuidance(false)}
-        onProceed={handleProceedWithPhotos}
+      {/* Modal de confirmação */}
+      <ConfirmationModal
+        open={showConfirmation}
+        onOpenChange={setShowConfirmation}
+        onConfirm={handleConfirmSubmit}
+        employee={employee}
+        equipment={equipment}
         action={action}
+        loading={loading}
       />
     </>
   )
