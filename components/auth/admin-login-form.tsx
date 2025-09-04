@@ -61,7 +61,7 @@ export function AdminLoginForm() {
               <Building2 className="h-8 w-8 text-primary-foreground" />
             </div>
           </div>
-          <h1 className="text-3xl font-bold text-primary mb-2">Sistema de Controle</h1>
+          <h1 className="text-3xl font-bold text-primary mb-2">ConfereAi</h1>
           <p className="text-muted-foreground">Equipamentos e Checklists</p>
         </div>
 
