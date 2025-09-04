@@ -309,3 +309,130 @@ body {
   align-items: center;
   gap: 1rem;
 }
+
+/* app/globals.css - Adicionar ao final do arquivo */
+
+/* Estilos específicos para modal de confirmação mobile */
+.mobile-confirmation-modal {
+  /* Garantir que o modal não seja maior que a viewport */
+  max-height: 85vh;
+  max-width: calc(100vw - 2rem);
+  overflow: hidden;
+ }
+ 
+ /* Ajustes específicos para DialogContent em mobile */
+ @media (max-width: 768px) {
+  [data-slot="dialog-content"] {
+    width: calc(100vw - 2rem) !important;
+    max-width: 400px !important;
+    max-height: 85vh !important;
+    margin: 1rem !important;
+    padding: 1rem !important;
+    gap: 1rem !important;
+  }
+  
+  /* Garantir que o overlay seja clicável */
+  [data-slot="dialog-overlay"] {
+    background-color: rgba(0, 0, 0, 0.5);
+  }
+  
+  /* Melhorar scroll interno do modal */
+  .mobile-confirmation-modal .custom-scrollbar {
+    max-height: 60vh;
+    overflow-y: auto;
+    padding-right: 0.5rem;
+  }
+  
+  /* Ajustar espaçamento dos botões no modal */
+  .mobile-confirmation-modal button {
+    min-height: 44px;
+    font-size: 14px;
+  }
+  
+  /* Texto mais compacto no modal */
+  .mobile-confirmation-modal .text-sm {
+    font-size: 13px;
+    line-height: 1.4;
+  }
+  
+  .mobile-confirmation-modal .text-xs {
+    font-size: 11px;
+    line-height: 1.3;
+  }
+ }
+ 
+ /* Ajustes para dispositivos muito pequenos */
+ @media (max-width: 360px) {
+  [data-slot="dialog-content"] {
+    width: calc(100vw - 1rem) !important;
+    margin: 0.5rem !important;
+    padding: 0.75rem !important;
+  }
+  
+  .mobile-confirmation-modal {
+    max-width: calc(100vw - 1rem);
+  }
+ }
+ 
+ /* Ajustes para landscape em mobile */
+ @media (orientation: landscape) and (max-height: 500px) {
+  [data-slot="dialog-content"] {
+    max-height: 90vh !important;
+  }
+  
+  .mobile-confirmation-modal .custom-scrollbar {
+    max-height: 50vh;
+  }
+ }
+ 
+ /* Estilos para RadioGroup melhorados para mobile */
+ @media (max-width: 768px) {
+  .mobile-checklist [role="radiogroup"] {
+    gap: 1.5rem;
+  }
+  
+  .mobile-checklist [role="radiogroup"] > div {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0;
+    min-height: 44px; /* Melhor área de toque */
+  }
+  
+  .mobile-checklist [role="radio"] {
+    width: 20px;
+    height: 20px;
+    border-width: 2px;
+  }
+  
+  /* Labels clicáveis maiores */
+  .mobile-checklist [role="radiogroup"] label {
+    cursor: pointer;
+    padding: 0.5rem;
+    margin: -0.5rem;
+    min-width: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+ }
+ 
+ /* Melhorias para acessibilidade e feedback visual */
+ .mobile-checklist [role="radio"]:focus {
+  outline: 2px solid oklch(var(--primary));
+  outline-offset: 2px;
+ }
+ 
+ .mobile-checklist [role="radio"][data-state="checked"] {
+  background-color: oklch(var(--primary));
+  border-color: oklch(var(--primary));
+ }
+ 
+ /* Animações suaves para transições */
+ .mobile-checklist [role="radio"] {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+ }
+ 
+ .mobile-checklist [role="radio"]:active {
+  transform: scale(0.95);
+ }

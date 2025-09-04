@@ -129,44 +129,34 @@ export default function ChecklistPage() {
   const handleBack = () => {
     switch (state.step) {
       case 'action':
-        // Voltar para validação, resetando employee
-        setState(prev => ({
-          ...prev,
-          employee: null,
-          step: 'validation'
-        }))
+        useState(prev => ({ ...prev, step: 'validation', action: null }))
         break
       case 'equipment':
-        // Voltar para seleção de ação, resetando action
-        setState(prev => ({
-          ...prev,
-          action: null,
-          step: 'action'
-        }))
+        useState(prev => ({ ...prev, step: 'action', equipment: null }))
         break
       case 'checklist':
-        // Voltar para seleção de equipamento, resetando equipment
-        setState(prev => ({
-          ...prev,
-          equipment: null,
-          step: 'equipment'
+        useState(prev => ({ 
+          ...prev, 
+          step: 'equipment', 
+          responses: {}, 
+          observations: '', 
+          photos: [], 
+          hasIssues: false 
         }))
         break
     }
   }
 
-  // Loading da validação do token
+  // Loading de validação do token
   if (tokenValidation.loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center p-4">
-        <Card className="w-full max-w-md">
-          <CardContent className="flex items-center justify-center py-8">
-            <div className="text-center">
-              <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-blue-600" />
-              <p className="text-gray-600">Validando acesso...</p>
-            </div>
-          </CardContent>
-        </Card>
+      <div className="mobile-container bg-gray-50">
+        <div className="mobile-content flex items-center justify-center">
+          <div className="mobile-loading">
+            <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+            <p className="text-sm text-gray-600">Validando acesso...</p>
+          </div>
+        </div>
       </div>
     )
   }
@@ -174,156 +164,159 @@ export default function ChecklistPage() {
   // Token inválido
   if (!tokenValidation.valid) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-red-50 to-orange-50 flex items-center justify-center p-4">
-        <Card className="w-full max-w-md">
-          <CardContent className="text-center py-8">
-            <AlertCircle className="w-12 h-12 text-red-600 mx-auto mb-4" />
-            <h2 className="text-xl font-semibold text-red-800 mb-2">Acesso Negado</h2>
-            <p className="text-red-700 mb-4">{tokenValidation.error}</p>
-            <Alert className="text-left">
-              <AlertDescription className="text-sm text-red-600">
-                Verifique se o link está correto ou entre em contato com o administrador.
+      <div className="mobile-container bg-gray-50">
+        <div className="mobile-content flex items-center justify-center">
+          <div className="mobile-error">
+            <div className="bg-white rounded-lg shadow-sm border border-red-200 p-6 max-w-sm mx-4">
+              <div className="text-center space-y-4">
+                <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto">
+                  <AlertCircle className="h-6 w-6 text-red-600" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-900 mb-2">
+                    Erro
+                  </h2>
+                  <p className="text-sm text-red-600">
+                    {tokenValidation.error}
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Button 
+                    onClick={validateToken}
+                    className="w-full bg-green-600 hover:bg-green-700"
+                  >
+                    Tentar Novamente
+                  </Button>
+                  <Button 
+                    onClick={reset}
+                    variant="outline"
+                    className="w-full border-red-300 text-red-700 hover:bg-red-50"
+                  >
+                    Reiniciar Checklist
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Renderizar componente baseado na etapa atual
+  const renderCurrentStep = () => {
+    switch (state.step) {
+      case 'validation':
+        return (
+          <EmployeeValidation
+            onValidate={validateEmployee} // Agora compatível
+            loading={loading}
+            error={error}
+          />
+        )
+
+      case 'action':
+        return (
+          <ActionSelection
+            employee={state.employee!}
+            onActionSelect={setAction} // Nome correto da prop
+          />
+        )
+
+      case 'equipment':
+        return (
+          <EquipmentSelection
+            employee={state.employee!}
+            action={state.action!}
+            onEquipmentSelect={setEquipment} // Nome correto da prop
+            onBack={handleBack}
+          />
+        )
+
+      case 'checklist':
+        return (
+          <ChecklistForm
+            employee={state.employee!}
+            equipment={state.equipment!}
+            action={state.action!}
+            responses={state.responses}
+            observations={state.observations}
+            photos={state.photos}
+            hasIssues={state.hasIssues}
+            loading={loading}
+            onUpdateResponse={updateResponse}
+            onUpdateObservations={updateObservations}
+            onAddPhoto={addPhoto}
+            onRemovePhoto={removePhoto}
+            onToggleIssue={toggleIssue}
+            onSubmit={handleSubmit}
+            onBack={handleBack}
+          />
+        )
+
+      case 'success':
+        return (
+          <ChecklistSuccess
+            action={state.action!}
+            equipmentName={state.equipment!.nome}
+            employeeName={state.employee!.nome}
+            onReset={reset} // Nome correto da prop
+          />
+        )
+
+      default:
+        return (
+          <div className="mobile-error">
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                Estado inválido do checklist. Recarregue a página.
               </AlertDescription>
             </Alert>
-          </CardContent>
-        </Card>
-      </div>
-    )
+          </div>
+        )
+    }
   }
 
-  // Detectar se é desktop e mostrar aviso
-  const isMobile = typeof window !== 'undefined' && 
-    /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
-
-  if (typeof window !== 'undefined' && !isMobile && window.innerWidth > 768) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center p-4">
-        <Card className="w-full max-w-md">
-          <CardContent className="text-center py-8">
-            <Smartphone className="w-16 h-16 text-blue-600 mx-auto mb-4" />
-            <h2 className="text-xl font-semibold text-blue-800 mb-2">Mobile Only</h2>
-            <p className="text-blue-700 mb-4">
-              Esta página foi otimizada para dispositivos móveis.
-              Acesse pelo seu smartphone para a melhor experiência.
-            </p>
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-              <p className="text-xs text-blue-600">
-                📱 Escaneie o QR Code ou acesse pelo celular para continuar
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Indicador para desktop */}
+      <div className="hidden md:block">
+        <div className="min-h-screen flex items-center justify-center bg-gray-100">
+          <Card className="max-w-md mx-4">
+            <CardContent className="p-8 text-center">
+              <Smartphone className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <h2 className="text-xl font-semibold text-gray-900 mb-2">
+                Interface Mobile
+              </h2>
+              <p className="text-gray-600 mb-4">
+                Esta interface foi otimizada para dispositivos móveis. 
+                Acesse pelo seu smartphone ou tablet para melhor experiência.
               </p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    )
-  }
-
-  // Mostrar erro global se houver
-  if (error) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-red-50 to-orange-50 flex items-center justify-center p-4">
-        <Card className="w-full max-w-md">
-          <CardContent className="text-center py-8">
-            <AlertCircle className="w-12 h-12 text-red-600 mx-auto mb-4" />
-            <h2 className="text-xl font-semibold text-red-800 mb-2">Erro</h2>
-            <p className="text-red-700 mb-4">{error}</p>
-            <div className="space-y-2">
-              <Button 
-                onClick={() => window.location.reload()}
-                className="w-full"
-              >
-                Tentar Novamente
-              </Button>
-              <Button 
-                onClick={reset}
-                variant="outline"
-                className="w-full border-red-300 text-red-700 hover:bg-red-50"
-              >
-                Reiniciar Checklist
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    )
-  }
-
-  // Renderizar etapas do checklist
-  switch (state.step) {
-    case 'validation':
-      return (
-        <EmployeeValidation 
-          onValidate={async (matricula: string) => {
-            const employee = await validateEmployee(matricula)
-            if (employee) {
-              setEmployee(employee)
-            }
-          }} 
-          loading={loading} 
-          error={error} 
-        />
-      )
-
-    case 'action':
-      return (
-        <ActionSelection 
-          onActionSelect={(action) => setAction(action)} 
-          employee={state.employee!} 
-        />
-      )
-
-    case 'equipment':
-      return (
-        <EquipmentSelection
-          employee={state.employee!}
-          action={state.action!}
-          onEquipmentSelect={(equipment) => setEquipment(equipment)}
-          onBack={handleBack}
-        />
-      )
-
-    case 'checklist':
-      return (
-        <ChecklistForm
-          employee={state.employee!}
-          equipment={state.equipment!}
-          action={state.action!}
-          responses={state.responses}
-          observations={state.observations}
-          photos={state.photos}
-          hasIssues={state.hasIssues}
-          loading={loading}
-          onUpdateResponse={updateResponse}
-          onUpdateObservations={updateObservations}
-          onAddPhoto={addPhoto}
-          onRemovePhoto={removePhoto}
-          onToggleIssue={toggleIssue}
-          onSubmit={handleSubmit}
-          onBack={handleBack}
-        />
-      )
-
-    case 'success':
-      return (
-        <ChecklistSuccess
-          action={state.action!}
-          equipmentName={state.equipment!.nome}
-          employeeName={state.employee!.nome}
-          onReset={reset}
-        />
-      )
-
-    default:
-      return (
-        <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center p-4">
-          <Card className="w-full max-w-md">
-            <CardContent className="text-center py-8">
-              <p className="text-gray-600">Estado desconhecido...</p>
-              <Button onClick={reset} className="mt-4">
-                Reiniciar
+              <Button onClick={() => window.location.href = '/dashboard'}>
+                Ir para Dashboard
               </Button>
             </CardContent>
           </Card>
         </div>
-      )
-  }
+      </div>
+
+      {/* Interface mobile */}
+      <div className="block md:hidden">
+        {renderCurrentStep()}
+      </div>
+
+      {/* Toast de erro global */}
+      {error && (
+        <div className="fixed bottom-4 left-4 right-4 z-50 md:hidden">
+          <Alert className="border-red-200 bg-red-50">
+            <AlertCircle className="h-4 w-4 text-red-600" />
+            <AlertDescription className="text-red-800">
+              {error}
+            </AlertDescription>
+          </Alert>
+        </div>
+      )}
+    </div>
+  )
 }

@@ -95,7 +95,8 @@ export function useChecklist() {
     setError(null)
   }, [])
 
-  const validateEmployee = useCallback(async (matricula: string): Promise<DatabaseEmployee | null> => {
+  // Função interna para validar funcionário
+  const validateEmployeeInternal = useCallback(async (matricula: string): Promise<DatabaseEmployee | null> => {
     try {
       setLoading(true)
       setError(null)
@@ -117,6 +118,16 @@ export function useChecklist() {
     }
   }, [])
 
+  // Wrapper para componente EmployeeValidation que espera Promise<boolean>
+  const validateEmployee = useCallback(async (matricula: string): Promise<boolean> => {
+    const employee = await validateEmployeeInternal(matricula)
+    if (employee) {
+      setEmployee(employee)
+      return true
+    }
+    return false
+  }, [validateEmployeeInternal, setEmployee])
+
   // Função auxiliar para converter File para base64
   const fileToBase64 = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -136,9 +147,29 @@ export function useChecklist() {
         throw new Error('Dados incompletos para submissão')
       }
 
-      // Converter fotos para base64
-      const photoPromises = state.photos.map(photo => fileToBase64(photo))
-      const photosBase64 = await Promise.all(photoPromises)
+      // Validar se todas as respostas são válidas
+      const checklistFields = state.equipment.checklist_campos || []
+      for (const field of checklistFields) {
+        if (!state.responses[field] || (state.responses[field] !== 'sim' && state.responses[field] !== 'nao')) {
+          throw new Error(`Resposta inválida para o campo: ${field}`)
+        }
+      }
+
+      // Validar fotos
+      if (state.photos.length !== 3) {
+        throw new Error('São necessárias exatamente 3 fotos')
+      }
+
+      // Converter fotos para base64 com tratamento de erro
+      const photosBase64: string[] = []
+      for (let i = 0; i < state.photos.length; i++) {
+        try {
+          const photoBase64 = await fileToBase64(state.photos[i])
+          photosBase64.push(photoBase64)
+        } catch (photoError) {
+          throw new Error(`Erro ao processar foto ${i + 1}`)
+        }
+      }
 
       // Determinar status baseado na confirmação do usuário
       const equipmentStatus = isEquipmentReady ? 'available' : 'maintenance'
@@ -156,6 +187,11 @@ export function useChecklist() {
         is_equipment_ready: isEquipmentReady
       }
 
+      console.log('Enviando payload:', {
+        ...payload,
+        photos: `${payload.photos.length} fotos`
+      })
+
       const response = await fetch('/api/checklist/submit', {
         method: 'POST',
         headers: {
@@ -165,21 +201,28 @@ export function useChecklist() {
       })
 
       if (!response.ok) {
-        const errorText = await response.text()
         let errorMessage = 'Erro ao submeter checklist'
         
         try {
-          const errorData = JSON.parse(errorText)
+          const errorData = await response.json()
           errorMessage = errorData.error || errorMessage
-        } catch {
-          // Se não conseguir fazer parse do JSON, usar mensagem padrão
-          console.error('Erro de resposta não-JSON:', errorText)
+        } catch (parseError) {
+          console.error('Erro ao fazer parse da resposta de erro:', parseError)
+          // Tentar ler como texto se não for JSON
+          try {
+            const errorText = await response.text()
+            console.error('Resposta de erro como texto:', errorText)
+            errorMessage = `Erro ${response.status}: ${response.statusText}`
+          } catch (textError) {
+            console.error('Erro ao ler resposta como texto:', textError)
+          }
         }
         
         throw new Error(errorMessage)
       }
 
       const result = await response.json()
+      console.log('Checklist enviado com sucesso:', result)
 
       setState(prev => ({ ...prev, step: 'success' }))
       return true
@@ -206,7 +249,7 @@ export function useChecklist() {
     removePhoto,
     toggleIssue,
     reset,
-    validateEmployee,
+    validateEmployee, // Agora retorna Promise<boolean>
     submitChecklist
   }
 }

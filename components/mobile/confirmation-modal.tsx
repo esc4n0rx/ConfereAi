@@ -36,31 +36,31 @@ export function ConfirmationModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md mx-4 rounded-lg">
-        <DialogHeader>
-          <DialogTitle className="text-center text-lg font-semibold">
+      <DialogContent className="mobile-confirmation-modal w-[calc(100vw-2rem)] max-w-[400px] max-h-[85vh] p-4 gap-4 rounded-lg">
+        <DialogHeader className="space-y-2">
+          <DialogTitle className="text-center text-lg font-semibold leading-tight">
             Confirmar {action === 'taking' ? 'Retirada' : 'Devolução'}
           </DialogTitle>
         </DialogHeader>
         
-        <div className="space-y-6">
+        <div className="space-y-4 max-h-[60vh] overflow-y-auto custom-scrollbar">
           {/* Resumo da operação */}
           <Card className="bg-gray-50 border-gray-200">
-            <CardContent className="p-4 space-y-3">
+            <CardContent className="p-3 space-y-2">
               <div className="flex items-center gap-2">
-                <User className="h-4 w-4 text-gray-600" />
-                <span className="text-sm text-gray-700">{employee.nome}</span>
+                <User className="h-4 w-4 text-gray-600 flex-shrink-0" />
+                <span className="text-sm text-gray-700 truncate">{employee.nome}</span>
               </div>
               <div className="flex items-center gap-2">
-                <Package className="h-4 w-4 text-gray-600" />
-                <span className="text-sm text-gray-700">{equipment.nome}</span>
+                <Package className="h-4 w-4 text-gray-600 flex-shrink-0" />
+                <span className="text-sm text-gray-700 truncate">{equipment.nome}</span>
                 {equipment.codigo && (
-                  <Badge variant="outline" className="text-xs">
+                  <Badge variant="outline" className="text-xs ml-auto">
                     {equipment.codigo}
                   </Badge>
                 )}
               </div>
-              <Badge className={actionColor}>
+              <Badge className={`${actionColor} text-white text-xs w-fit`}>
                 {action === 'taking' ? 'Retirada' : 'Devolução'}
               </Badge>
             </CardContent>
@@ -68,40 +68,18 @@ export function ConfirmationModal({
 
           {/* Pergunta principal */}
           <div className="text-center space-y-3">
-            <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-              <h3 className="font-semibold text-blue-900 mb-2">
+            <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
+              <h3 className="font-semibold text-blue-900 mb-1 text-sm">
                 Baseado na sua avaliação:
               </h3>
-              <p className="text-blue-800">
+              <p className="text-blue-800 text-sm">
                 O equipamento está apto para uso normal?
               </p>
             </div>
             
-            <p className="text-sm text-gray-600">
+            <p className="text-xs text-gray-600">
               Esta informação será usada para definir o status do equipamento no sistema.
             </p>
-          </div>
-
-          {/* Botões de confirmação */}
-          <div className="space-y-3">
-            <Button
-              onClick={() => handleConfirm(true)}
-              disabled={loading}
-              className="w-full h-12 bg-green-600 hover:bg-green-700 text-white font-medium"
-            >
-              <CheckCircle className="h-4 w-4 mr-2" />
-              {loading ? 'Enviando...' : 'Sim, está apto para uso'}
-            </Button>
-            
-            <Button
-              onClick={() => handleConfirm(false)}
-              disabled={loading}
-              variant="outline"
-              className="w-full h-12 border-orange-300 text-orange-700 hover:bg-orange-50 font-medium"
-            >
-              <AlertTriangle className="h-4 w-4 mr-2" />
-              {loading ? 'Enviando...' : 'Não, precisa de atenção'}
-            </Button>
           </div>
 
           {/* Informação adicional */}
@@ -111,6 +89,28 @@ export function ConfirmationModal({
               Caso indique que precisa de atenção, será marcado para revisão posterior.
             </p>
           </div>
+        </div>
+
+        {/* Botões de confirmação */}
+        <div className="space-y-2 pt-2 border-t border-gray-200">
+          <Button
+            onClick={() => handleConfirm(true)}
+            disabled={loading}
+            className="w-full h-11 bg-green-600 hover:bg-green-700 text-white font-medium text-sm"
+          >
+            <CheckCircle className="h-4 w-4 mr-2" />
+            {loading ? 'Enviando...' : 'Sim, está apto para uso'}
+          </Button>
+          
+          <Button
+            onClick={() => handleConfirm(false)}
+            disabled={loading}
+            variant="outline"
+            className="w-full h-11 border-orange-300 text-orange-700 hover:bg-orange-50 font-medium text-sm"
+          >
+            <AlertTriangle className="h-4 w-4 mr-2" />
+            {loading ? 'Enviando...' : 'Não, precisa de atenção'}
+          </Button>
         </div>
       </DialogContent>
     </Dialog>
