@@ -1,15 +1,28 @@
 // components/mobile/checklist-form.tsx
 "use client"
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { Checkbox } from '@/components/ui/checkbox'
-import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
-import { ArrowLeft, CheckCircle, AlertTriangle, Loader2 } from 'lucide-react'
-import { PhotoCapture } from './photo-capture'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Switch } from '@/components/ui/switch'
+import { 
+  Camera, 
+  Package, 
+  User, 
+  ArrowLeft, 
+  Send, 
+  X, 
+  AlertTriangle,
+  CheckCircle,
+  Plus,
+  FileImage
+} from 'lucide-react'
+import { PhotoGuidanceModal } from './photo-guidance-modal'
 import type { DatabaseEmployee, DatabaseEquipment } from '@/lib/types'
 
 interface ChecklistFormProps {
@@ -25,8 +38,8 @@ interface ChecklistFormProps {
   onUpdateObservations: (observations: string) => void
   onAddPhoto: (photo: File) => void
   onRemovePhoto: (index: number) => void
-  onToggleIssue: (hasIssues: boolean) => void
-  onSubmit: () => Promise<void>
+  onToggleIssue: (hasIssue: boolean) => void
+  onSubmit: () => void
   onBack: () => void
 }
 
@@ -47,97 +60,188 @@ export function ChecklistForm({
   onSubmit,
   onBack
 }: ChecklistFormProps) {
-  const [submitting, setSubmitting] = useState(false)
+  const [showPhotoGuidance, setShowPhotoGuidance] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const getActionTitle = () => {
-    return action === 'taking' ? 'Retirada de Equipamento' : 'Devolução de Equipamento'
+  const checklistFields = equipment.checklist_campos || []
+
+  const handlePhotoClick = () => {
+    setShowPhotoGuidance(true)
   }
 
-  const getActionColor = () => {
-    return action === 'taking' ? 'bg-blue-600' : 'bg-green-600'
-  }
-
-  const handleSubmit = async () => {
-    setSubmitting(true)
-    try {
-      await onSubmit()
-    } finally {
-      setSubmitting(false)
+  const handleProceedWithPhotos = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click()
     }
   }
 
+  const handlePhotoCapture = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (files) {
+      Array.from(files).forEach(file => {
+        onAddPhoto(file)
+      })
+    }
+    // Reset input para permitir selecionar o mesmo arquivo novamente
+    e.target.value = ''
+  }
+
+  const canSubmit = () => {
+    // Deve ter pelo menos uma foto
+    if (photos.length === 0) {
+      return false
+    }
+    
+    // Todos os campos do checklist devem estar preenchidos
+    for (const field of checklistFields) {
+      if (!responses[field] || responses[field] === '') {
+        return false
+      }
+    }
+    
+    return true
+  }
+
+  const getActionBadge = () => {
+    return action === 'taking' 
+      ? <Badge className="bg-blue-600">Retirada</Badge>
+      : <Badge className="bg-green-600">Devolução</Badge>
+  }
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 p-4 pb-20">
-      <div className="max-w-md mx-auto">
-        <div className="flex items-center mb-4">
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={onBack}
-            className="mr-2"
-            disabled={submitting}
-          >
-            <ArrowLeft className="w-4 h-4" />
-          </Button>
-          <h1 className="text-lg font-semibold">{getActionTitle()}</h1>
+    <>
+      <div className="container mx-auto px-4 py-6 max-w-2xl">
+        {/* Header */}
+        <div className="mb-6">
+          <div className="flex items-center gap-4 mb-4">
+            <Button variant="outline" size="icon" onClick={onBack}>
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <div>
+              <h1 className="text-xl font-bold">Checklist do Equipamento</h1>
+              <p className="text-sm text-gray-600">Preencha todas as informações</p>
+            </div>
+          </div>
         </div>
 
-        {/* Resumo */}
+        {/* Informações */}
         <Card className="mb-6">
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-lg">{equipment.nome}</CardTitle>
-              <Badge className={getActionColor()}>
-                {action === 'taking' ? 'Retirada' : 'Devolução'}
-              </Badge>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <div className="text-sm">
-              <span className="font-medium">Funcionário:</span> {employee.nome}
-            </div>
-            <div className="text-sm">
-              <span className="font-medium">Equipamento:</span> {equipment.descricao}
-            </div>
-            {equipment.codigo && (
-              <div className="text-sm font-mono">
-                <span className="font-medium">Código:</span> {equipment.codigo}
+          <CardContent className="p-4">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <User className="h-4 w-4 text-gray-600" />
+                  <span className="text-sm font-medium">{employee.nome}</span>
+                </div>
+                {getActionBadge()}
               </div>
-            )}
+              
+              <div className="flex items-center gap-2">
+                <Package className="h-4 w-4 text-gray-600" />
+                <div>
+                  <span className="text-sm font-medium">{equipment.nome}</span>
+                  {equipment.codigo && (
+                    <span className="text-xs text-gray-500 ml-2">({equipment.codigo})</span>
+                  )}
+                </div>
+              </div>
+            </div>
           </CardContent>
         </Card>
 
-        {/* Checklist */}
+        {/* Campos do Checklist */}
+        {checklistFields.length > 0 && (
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle className="text-lg">Itens de Verificação</CardTitle>
+            </CardHeader>
+            <CardContent className="p-4 space-y-4">
+              {checklistFields.map((field, index) => (
+                <div key={index} className="space-y-2">
+                  <Label htmlFor={`field-${index}`} className="text-sm font-medium">
+                    {field}
+                  </Label>
+                  <div className="flex gap-2">
+                    <Button
+                      variant={responses[field] === 'ok' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => onUpdateResponse(field, 'ok')}
+                      className="flex-1"
+                    >
+                      <CheckCircle className="h-4 w-4 mr-1" />
+                      OK
+                    </Button>
+                    <Button
+                      variant={responses[field] === 'problema' ? 'destructive' : 'outline'}
+                      size="sm"
+                      onClick={() => onUpdateResponse(field, 'problema')}
+                      className="flex-1"
+                    >
+                      <AlertTriangle className="h-4 w-4 mr-1" />
+                      Problema
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Fotos */}
         <Card className="mb-6">
           <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <CheckCircle className="w-5 h-5" />
-              Verificações
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Camera className="h-5 w-5" />
+              Fotos do Equipamento
+              <Badge variant="destructive" className="text-xs">Obrigatório</Badge>
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            {equipment.checklist_campos && equipment.checklist_campos.length > 0 ? (
-              equipment.checklist_campos.map((campo, index) => (
-                <div key={index} className="flex items-start gap-3">
-                  <Checkbox
-                    id={`check_${index}`}
-                    checked={responses[campo] === true}
-                    onCheckedChange={(checked) => onUpdateResponse(campo, checked)}
-                    className="mt-1"
-                  />
-                  <label 
-                    htmlFor={`check_${index}`}
-                    className="text-sm flex-1 cursor-pointer"
-                  >
-                    {campo}
-                  </label>
-                </div>
-              ))
-            ) : (
-              <p className="text-sm text-gray-600 italic">
-                Nenhuma verificação específica configurada para este equipamento.
-              </p>
+          <CardContent className="p-4 space-y-4">
+            {photos.length === 0 && (
+              <Alert>
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription>
+                  É obrigatório tirar pelo menos uma foto do equipamento e do número de série.
+                </AlertDescription>
+              </Alert>
             )}
+
+            <Button
+              onClick={handlePhotoClick}
+              variant="outline"
+              className="w-full h-12"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              {photos.length === 0 ? 'Adicionar Primeira Foto' : 'Adicionar Mais Fotos'}
+            </Button>
+
+            {photos.length > 0 && (
+              <div className="grid grid-cols-2 gap-4">
+                {photos.map((photo, index) => (
+                  <div key={index} className="relative">
+                    <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden">
+                      <img
+                        src={URL.createObjectURL(photo)}
+                        alt={`Foto ${index + 1}`}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <Button
+                      variant="destructive"
+                      size="icon"
+                      className="absolute -top-2 -right-2 h-6 w-6"
+                      onClick={() => onRemovePhoto(index)}
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <p className="text-xs text-gray-500">
+              📸 Fotografe: número de série, estado geral do equipamento e possíveis danos
+            </p>
           </CardContent>
         </Card>
 
@@ -146,79 +250,88 @@ export function ChecklistForm({
           <CardHeader>
             <CardTitle className="text-lg">Observações</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-4">
             <Textarea
-              placeholder="Adicione observações sobre o estado do equipamento..."
+              placeholder="Descreva qualquer observação adicional sobre o equipamento..."
               value={observations}
               onChange={(e) => onUpdateObservations(e.target.value)}
-              rows={3}
-              className="resize-none"
+              className="min-h-20"
             />
           </CardContent>
         </Card>
 
-        {/* Problemas Identificados */}
+        {/* Toggle de problemas */}
         <Card className="mb-6">
-          <CardContent className="pt-6">
-            <div className="flex items-start gap-3">
-              <Checkbox
-                id="has_issues"
-                checked={hasIssues}
-                onCheckedChange={(checked) => onToggleIssue(!!checked)}
-              />
-              <div className="flex-1">
-                <label 
-                  htmlFor="has_issues"
-                  className="text-sm font-medium cursor-pointer flex items-center gap-2"
-                >
-                  <AlertTriangle className="w-4 h-4 text-amber-500" />
-                  Foram identificados problemas neste equipamento
-                </label>
-                <p className="text-xs text-gray-600 mt-1">
-                  Marque esta opção se houver danos, problemas de funcionamento ou outras questões
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <Label htmlFor="has-issues" className="text-sm font-medium">
+                  Este equipamento tem problemas?
+                </Label>
+                <p className="text-xs text-gray-500">
+                  Marque se identificou algum problema no equipamento
                 </p>
               </div>
+              <Switch
+                id="has-issues"
+                checked={hasIssues}
+                onCheckedChange={onToggleIssue}
+              />
             </div>
           </CardContent>
         </Card>
 
-        {/* Fotos */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle className="text-lg">Fotos</CardTitle>
-            <p className="text-sm text-gray-600">
-              Adicione fotos do equipamento para documentar seu estado
-            </p>
-          </CardHeader>
-          <CardContent>
-            <PhotoCapture
-              photos={photos}
-              onAddPhoto={onAddPhoto}
-              onRemovePhoto={onRemovePhoto}
-            />
-          </CardContent>
-        </Card>
+        {/* Botão de envio */}
+        <Button
+          onClick={onSubmit}
+          disabled={!canSubmit() || loading}
+          className="w-full h-12 text-lg"
+        >
+          {loading ? (
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              Enviando...
+            </div>
+          ) : (
+            <>
+              <Send className="h-4 w-4 mr-2" />
+              Finalizar {action === 'taking' ? 'Retirada' : 'Devolução'}
+            </>
+          )}
+        </Button>
 
-        {/* Submit */}
-        <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t">
-          <div className="max-w-md mx-auto">
-            <Button 
-              onClick={handleSubmit} 
-              className="w-full h-12"
-              disabled={submitting || loading}
-            >
-              {submitting || loading ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Enviando...
-                </>
-              ) : (
-                `Confirmar ${action === 'taking' ? 'Retirada' : 'Devolução'}`
-              )}
-            </Button>
+        {!canSubmit() && !loading && (
+          <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <p className="text-sm text-yellow-800">
+              <AlertTriangle className="h-4 w-4 inline mr-1" />
+              {photos.length === 0 
+                ? 'Adicione pelo menos uma foto para continuar'
+                : 'Preencha todos os campos de verificação para continuar'
+              }
+            </p>
           </div>
-        </div>
+        )}
+
+        {/* Input oculto para fotos */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          multiple
+          onChange={handlePhotoCapture}
+          className="hidden"
+        />
       </div>
-    </div>
+
+      {/* Modal de orientação */}
+      <PhotoGuidanceModal
+        open={showPhotoGuidance}
+        onOpenChange={setShowPhotoGuidance}
+        onProceed={handleProceedWithPhotos}
+        equipmentName={equipment.nome}
+        action={action}
+      />
+    </>
   )
 }
