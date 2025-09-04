@@ -68,40 +68,37 @@ export function useChecklist() {
     setError(null)
   }, [])
 
-  const validateEmployee = useCallback(async (nome: string): Promise<boolean> => {
+  const validateEmployeeInternal = useCallback(async (matricula: string): Promise<DatabaseEmployee | null> => {
     try {
       setLoading(true)
       setError(null)
 
-      const response = await fetch('/api/checklist/employee/validate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ nome }),
-      })
+      const response = await fetch(`/api/employees/validate-matricula?matricula=${encodeURIComponent(matricula)}`)
+      
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Funcionário não encontrado')
+      }
 
       const result = await response.json()
-
-      if (!response.ok) {
-        setError(result.error || 'Erro ao validar funcionário')
-        return false
-      }
-
-      if (result.employee) {
-        setEmployee(result.employee)
-        return true
-      } else {
-        setError('Funcionário não encontrado')
-        return false
-      }
+      return result.employee
     } catch (err: any) {
-      setError(err.message || 'Erro ao validar funcionário')
-      return false
+      setError(err.message)
+      return null
     } finally {
       setLoading(false)
     }
-  }, [setEmployee])
+  }, [])
+
+  // Wrapper para componente EmployeeValidation que espera Promise<boolean>
+  const validateEmployee = useCallback(async (matricula: string): Promise<boolean> => {
+    const employee = await validateEmployeeInternal(matricula)
+    if (employee) {
+      setEmployee(employee)
+      return true
+    }
+    return false
+  }, [validateEmployeeInternal, setEmployee])
 
   // CORREÇÃO PRINCIPAL: Melhorar conversão de fotos para base64
   const convertFileToBase64 = useCallback((file: File): Promise<string> => {

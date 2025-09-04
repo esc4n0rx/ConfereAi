@@ -152,7 +152,7 @@ export class ChecklistAPI {
     }
   }
 
-  static async validateEmployee(nome: string): Promise<DatabaseEmployee | null> {
+  static async validateEmployeeInternal (nome: string): Promise<DatabaseEmployee | null> {
     try {
       const supabase = createServerClient()
       
