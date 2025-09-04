@@ -143,6 +143,8 @@ export interface UpdateEquipmentData {
 // Novos tipos para Checklist Mobile
 export interface ChecklistData {
   id: string
+  employee_id:string
+  equipment_id:string
   codigo: string
   employee: DatabaseEmployee
   equipment: DatabaseEquipment
@@ -205,4 +207,52 @@ export interface ExtendedChecklistData extends ChecklistData {
   equipment_status: 'available' | 'maintenance'
   is_equipment_ready: boolean
   photos: string[]
+}
+
+// lib/types.ts (ADICIONAR ao arquivo existente)
+
+// Tipos para Managers/Encarregados
+export interface Manager {
+  id: string
+  nome: string
+  telefone: string
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface CreateManagerData {
+  nome: string
+  telefone: string
+}
+
+export interface UpdateManagerData {
+  nome?: string
+  telefone?: string
+  is_active?: boolean
+}
+
+// Tipos para Sistema de Aprovação
+export interface ChecklistApproval {
+  id: string
+  checklist_id: string
+  manager_id: string
+  status: 'pending' | 'approved' | 'rejected'
+  response_message?: string
+  responded_at?: string
+  created_at: string
+  updated_at: string
+}
+
+export interface ChecklistWithApproval extends ChecklistData {
+  status: 'pending' | 'approved' | 'rejected' | 'completed'
+  approval_status?: 'pending' | 'approved' | 'rejected'
+  approved_by?: Manager
+  approval_response?: string
+}
+
+// Atualizar a interface ChecklistData existente para incluir status
+export interface ChecklistDataWithStatus extends ChecklistData {
+  status: 'pending' | 'approved' | 'rejected' | 'completed'
+  approval_status?: 'pending' | 'approved' | 'rejected'
 }

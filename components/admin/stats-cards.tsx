@@ -1,9 +1,9 @@
-// components/admin/stats-cards.tsx
+// components/admin/stats-cards.tsx (SUBSTITUIR arquivo completo)
 "use client"
 
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Package, Users, Activity, AlertTriangle, Loader2 } from "lucide-react"
+import { Package, Users, Activity, AlertTriangle, Loader2, Bell } from "lucide-react"
 
 interface StatsData {
   totalEquipment: number
@@ -12,6 +12,7 @@ interface StatsData {
   maintenanceEquipment: number
   totalEmployees: number
   recentActivity: number
+  pendingApprovals: number
 }
 
 export function StatsCards() {
@@ -21,7 +22,8 @@ export function StatsCards() {
     inUseEquipment: 0,
     maintenanceEquipment: 0,
     totalEmployees: 0,
-    recentActivity: 0
+    recentActivity: 0,
+    pendingApprovals: 0
   })
   const [loading, setLoading] = useState(true)
 
@@ -32,21 +34,33 @@ export function StatsCards() {
   const loadStats = async () => {
     try {
       setLoading(true)
+      
+      // Buscar todas as APIs em paralelo
+      const [equipmentsResponse, employeesResponse, checklistsResponse, approvalsResponse] = await Promise.all([
+        fetch('/api/equipments'),
+        fetch('/api/employees'),
+        fetch('/api/checklist'),
+        fetch('/api/checklist/pending').catch(() => ({ ok: false })) // Fallback se a API não existir ainda
+      ])
 
-      // Buscar equipamentos
-      const equipmentsResponse = await fetch('/api/equipments')
+      // Processar equipamentos
       const equipmentsResult = await equipmentsResponse.json()
       const equipments = equipmentsResult.equipments || []
 
-      // Buscar funcionários
-      const employeesResponse = await fetch('/api/employees')
+      // Processar funcionários
       const employeesResult = await employeesResponse.json()
       const employees = employeesResult.employees || []
 
-      // Buscar checklists
-      const checklistsResponse = await fetch('/api/checklist')
+      // Processar checklists
       const checklistsResult = await checklistsResponse.json()
       const checklists = checklistsResult.checklists || []
+
+      // Processar aprovações pendentes
+      let pendingApprovals = 0
+      if (approvalsResponse.ok) {
+        const approvalData = await approvalsResponse.json()
+        pendingApprovals = approvalData.pendingApprovals?.length || 0
+      }
 
       // Calcular estatísticas
       const today = new Date()
@@ -84,6 +98,7 @@ export function StatsCards() {
         maintenanceEquipment,
         totalEmployees,
         recentActivity,
+        pendingApprovals
       })
     } catch (error) {
       console.error('Erro ao carregar estatísticas:', error)
@@ -93,6 +108,14 @@ export function StatsCards() {
   }
 
   const cards = [
+    {
+      title: "Aprovações Pendentes",
+      value: stats.pendingApprovals,
+      icon: Bell,
+      description: stats.pendingApprovals > 0 ? "Requerem atenção" : "Tudo em dia",
+      color: stats.pendingApprovals > 0 ? "text-orange-600" : "text-green-600",
+      loading: loading,
+    },
     {
       title: "Total de Equipamentos",
       value: stats.totalEquipment,
@@ -147,7 +170,7 @@ export function StatsCards() {
         <Card key={index}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">{card.title}</CardTitle>
-            <card.icon className={`h-4 w-4 ${card.className || "text-muted-foreground"}`} />
+            <card.icon className={`h-4 w-4 ${card.className || card.color || "text-muted-foreground"}`} />
           </CardHeader>
           <CardContent>
             {card.loading ? (
@@ -157,7 +180,7 @@ export function StatsCards() {
               </div>
             ) : (
               <>
-                <div className={`text-2xl font-bold ${card.className || "text-foreground"}`}>
+                <div className={`text-2xl font-bold ${card.className || card.color || "text-foreground"}`}>
                   {card.value}
                 </div>
                 <p className="text-xs text-muted-foreground">{card.description}</p>

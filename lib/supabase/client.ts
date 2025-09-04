@@ -64,47 +64,6 @@ export type Database = {
           updated_at?: string
         }
       }
-      confereai_checklists: {
-        Row: {
-          id: string
-          codigo: string
-          employee_id: string
-          equipment_id: string
-          action: 'taking' | 'returning'
-          checklist_responses: Record<string, any>
-          observations: string | null
-          has_issues: boolean
-          device_timestamp: string
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          codigo: string
-          employee_id: string
-          equipment_id: string
-          action: 'taking' | 'returning'
-          checklist_responses?: Record<string, any>
-          observations?: string | null
-          has_issues?: boolean
-          device_timestamp: string
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          codigo?: string
-          employee_id?: string
-          equipment_id?: string
-          action?: 'taking' | 'returning'
-          checklist_responses?: Record<string, any>
-          observations?: string | null
-          has_issues?: boolean
-          device_timestamp?: string
-          created_at?: string
-          updated_at?: string
-        }
-      }
       confereai_checklist_photos: {
         Row: {
           id: string
@@ -154,9 +113,123 @@ export type Database = {
           expires_at?: string | null
         }
       }
+      confereai_managers: {
+        Row: {
+          id: string
+          nome: string
+          telefone: string
+          is_active: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          nome: string
+          telefone: string
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          nome?: string
+          telefone?: string
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      
+      confereai_checklist_approvals: {
+        Row: {
+          id: string
+          checklist_id: string
+          manager_id: string
+          status: 'pending' | 'approved' | 'rejected'
+          response_message?: string | null
+          responded_at?: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          checklist_id: string
+          manager_id: string
+          status?: 'pending' | 'approved' | 'rejected'
+          response_message?: string | null
+          responded_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          checklist_id?: string
+          manager_id?: string
+          status?: 'pending' | 'approved' | 'rejected'
+          response_message?: string | null
+          responded_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      
+      confereai_checklists: {
+        Row: {
+          id: string
+          codigo: string
+          employee_id: string
+          equipment_id: string
+          action: 'taking' | 'returning'
+          checklist_responses: Record<string, any>
+          observations: string | null
+          has_issues: boolean
+          device_timestamp: string
+          status: 'pending' | 'approved' | 'rejected' | 'completed'
+          approval_status?: 'pending' | 'approved' | 'rejected' | null
+          approved_by?: string | null
+          approval_response?: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          codigo: string
+          employee_id: string
+          equipment_id: string
+          action: 'taking' | 'returning'
+          checklist_responses?: Record<string, any>
+          observations?: string | null
+          has_issues?: boolean
+          device_timestamp: string
+          status?: 'pending' | 'approved' | 'rejected' | 'completed'
+          approval_status?: 'pending' | 'approved' | 'rejected' | null
+          approved_by?: string | null
+          approval_response?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          codigo?: string
+          employee_id?: string
+          equipment_id?: string
+          action?: 'taking' | 'returning'
+          checklist_responses?: Record<string, any>
+          observations?: string | null
+          has_issues?: boolean
+          device_timestamp?: string
+          status?: 'pending' | 'approved' | 'rejected' | 'completed'
+          approval_status?: 'pending' | 'approved' | 'rejected' | null
+          approved_by?: string | null
+          approval_response?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
     }
   }
 }
+
 
 export function createClient() {
   return createBrowserClient<Database>(
