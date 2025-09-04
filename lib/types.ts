@@ -1,3 +1,4 @@
+// lib/types.ts
 export interface Employee {
   id: string
   matricula: string
@@ -24,6 +25,18 @@ export interface Equipment {
   code: string
   photos: string[]
   status: "available" | "in-use" | "maintenance" | "retired"
+  createdAt: Date
+  updatedAt: Date
+}
+
+// Novos tipos para o sistema de equipamentos
+export interface EquipmentNew {
+  id: string
+  nome: string
+  descricao: string
+  codigo?: string
+  status: "disponivel" | "manutencao" | "quebrado" | "inativo"
+  checklistCampos: string[]
   createdAt: Date
   updatedAt: Date
 }
@@ -69,6 +82,7 @@ export interface ChecklistHistory {
 }
 
 export type EquipmentStatus = Equipment["status"]
+export type EquipmentStatusNew = EquipmentNew["status"]
 export type ChecklistAction = ChecklistResponse["action"]
 
 // Novos tipos para API
@@ -77,6 +91,18 @@ export interface DatabaseEmployee {
   matricula: string
   nome: string
   cargo: string
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface DatabaseEquipment {
+  id: string
+  nome: string
+  descricao: string
+  codigo?: string
+  status: EquipmentStatusNew
+  checklist_campos: string[]
   is_active: boolean
   created_at: string
   updated_at: string
@@ -92,5 +118,22 @@ export interface UpdateEmployeeData {
   matricula?: string
   nome?: string
   cargo?: string
+  is_active?: boolean
+}
+
+export interface CreateEquipmentData {
+  nome: string
+  descricao: string
+  codigo?: string
+  status: EquipmentStatusNew
+  checklistCampos: string[]
+}
+
+export interface UpdateEquipmentData {
+  nome?: string
+  descricao?: string
+  codigo?: string
+  status?: EquipmentStatusNew
+  checklistCampos?: string[]
   is_active?: boolean
 }

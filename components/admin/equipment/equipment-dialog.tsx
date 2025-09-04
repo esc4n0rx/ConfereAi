@@ -16,83 +16,125 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { dataStore } from "@/lib/data-store"
-import type { Equipment, EquipmentStatus } from "@/lib/types"
+import { Badge } from "@/components/ui/badge"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import type { EquipmentNew, EquipmentStatusNew } from "@/lib/types"
+import { AlertTriangle, Plus, X } from "lucide-react"
 
 interface EquipmentDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  equipment?: Equipment | null
+  equipment?: EquipmentNew | null
   onSuccess: () => void
 }
 
 export function EquipmentDialog({ open, onOpenChange, equipment, onSuccess }: EquipmentDialogProps) {
   const [formData, setFormData] = useState({
-    name: "",
-    description: "",
-    code: "",
-    status: "available" as EquipmentStatus,
-    photos: [] as string[],
+    nome: "",
+    descricao: "",
+    codigo: "",
+    status: "disponivel" as EquipmentStatusNew,
+    checklistCampos: [] as string[],
   })
+  const [newChecklistField, setNewChecklistField] = useState("")
   const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState("")
 
   useEffect(() => {
     if (equipment) {
       setFormData({
-        name: equipment.name,
-        description: equipment.description,
-        code: equipment.code,
+        nome: equipment.nome,
+        descricao: equipment.descricao,
+        codigo: equipment.codigo || "",
         status: equipment.status,
-        photos: equipment.photos,
+        checklistCampos: equipment.checklistCampos || [],
       })
     } else {
       setFormData({
-        name: "",
-        description: "",
-        code: "",
-        status: "available",
-        photos: [],
+        nome: "",
+        descricao: "",
+        codigo: "",
+        status: "disponivel",
+        checklistCampos: [],
       })
     }
-  }, [equipment])
+    setError("")
+    setNewChecklistField("")
+  }, [equipment, open])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setError("")
     setIsLoading(true)
 
     try {
-      if (equipment) {
-        dataStore.updateEquipment(equipment.id, formData)
-      } else {
-        dataStore.addEquipment(formData)
+      const url = equipment ? `/api/equipments/${equipment.id}` : '/api/equipments'
+      const method = equipment ? 'PUT' : 'POST'
+      
+      const response = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Erro ao salvar equipamento')
       }
+
       onSuccess()
-    } catch (error) {
-      console.error("Error saving equipment:", error)
+      onOpenChange(false)
+    } catch (error: any) {
+      console.error('Erro ao salvar equipamento:', error)
+      setError(error.message || 'Erro ao salvar equipamento. Tente novamente.')
     } finally {
       setIsLoading(false)
     }
   }
 
-  const handlePhotoUrlAdd = (url: string) => {
-    if (url.trim() && !formData.photos.includes(url.trim())) {
-      setFormData((prev) => ({
+  const addChecklistField = () => {
+    if (newChecklistField.trim() && !formData.checklistCampos.includes(newChecklistField.trim())) {
+      setFormData(prev => ({
         ...prev,
-        photos: [...prev.photos, url.trim()],
+        checklistCampos: [...prev.checklistCampos, newChecklistField.trim()]
       }))
+      setNewChecklistField("")
     }
   }
 
-  const handlePhotoRemove = (index: number) => {
-    setFormData((prev) => ({
+  const removeChecklistField = (index: number) => {
+    setFormData(prev => ({
       ...prev,
-      photos: prev.photos.filter((_, i) => i !== index),
+      checklistCampos: prev.checklistCampos.filter((_, i) => i !== index)
     }))
+  }
+
+  const getStatusLabel = (status: EquipmentStatusNew) => {
+    const labels = {
+      disponivel: "Disponível",
+      manutencao: "Manutenção", 
+      quebrado: "Quebrado",
+      inativo: "Inativo"
+    }
+    return labels[status] || status
+  }
+
+  const getStatusVariant = (status: EquipmentStatusNew) => {
+    const variants = {
+      disponivel: "default" as const,
+      manutencao: "secondary" as const,
+      quebrado: "destructive" as const,
+      inativo: "outline" as const
+    }
+    return variants[status] || "outline"
   }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{equipment ? "Editar Equipamento" : "Adicionar Equipamento"}</DialogTitle>
           <DialogDescription>
@@ -103,36 +145,38 @@ export function EquipmentDialog({ open, onOpenChange, equipment, onSuccess }: Eq
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Nome</Label>
+              <Label htmlFor="nome">Nome *</Label>
               <Input
-                id="name"
-                value={formData.name}
-                onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
+                id="nome"
+                value={formData.nome}
+                onChange={(e) => setFormData((prev) => ({ ...prev, nome: e.target.value }))}
                 placeholder="Nome do equipamento"
                 required
+                maxLength={255}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="code">Código</Label>
+              <Label htmlFor="codigo">Código</Label>
               <Input
-                id="code"
-                value={formData.code}
-                onChange={(e) => setFormData((prev) => ({ ...prev, code: e.target.value }))}
-                placeholder="EPI-001"
-                required
+                id="codigo"
+                value={formData.codigo}
+                onChange={(e) => setFormData((prev) => ({ ...prev, codigo: e.target.value }))}
+                placeholder="EQ-001 (opcional)"
+                maxLength={50}
               />
             </div>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="description">Descrição</Label>
+            <Label htmlFor="descricao">Descrição *</Label>
             <Textarea
-              id="description"
-              value={formData.description}
-              onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
+              id="descricao"
+              value={formData.descricao}
+              onChange={(e) => setFormData((prev) => ({ ...prev, descricao: e.target.value }))}
               placeholder="Descrição detalhada do equipamento"
               rows={3}
               required
+              maxLength={1000}
             />
           </div>
 
@@ -140,62 +184,81 @@ export function EquipmentDialog({ open, onOpenChange, equipment, onSuccess }: Eq
             <Label htmlFor="status">Status</Label>
             <Select
               value={formData.status}
-              onValueChange={(value: EquipmentStatus) => setFormData((prev) => ({ ...prev, status: value }))}
+              onValueChange={(value: EquipmentStatusNew) => setFormData((prev) => ({ ...prev, status: value }))}
             >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="available">Disponível</SelectItem>
-                <SelectItem value="in-use">Em Uso</SelectItem>
-                <SelectItem value="maintenance">Manutenção</SelectItem>
-                <SelectItem value="retired">Aposentado</SelectItem>
+                <SelectItem value="disponivel">Disponível</SelectItem>
+                <SelectItem value="manutencao">Manutenção</SelectItem>
+                <SelectItem value="quebrado">Quebrado</SelectItem>
+                <SelectItem value="inativo">Inativo</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
-          <div className="space-y-2">
-            <Label>Fotos</Label>
-            <div className="space-y-2">
+          <div className="space-y-3">
+            <Label>Campos do Checklist</Label>
+            <p className="text-sm text-muted-foreground">
+              Configure os campos que aparecerão no checklist deste equipamento
+            </p>
+            
+            <div className="flex gap-2">
               <Input
-                placeholder="URL da foto"
+                value={newChecklistField}
+                onChange={(e) => setNewChecklistField(e.target.value)}
+                placeholder="Ex: Bateria carregada, Pneus calibrados..."
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
                     e.preventDefault()
-                    handlePhotoUrlAdd(e.currentTarget.value)
-                    e.currentTarget.value = ""
+                    addChecklistField()
                   }
                 }}
               />
-              <p className="text-xs text-muted-foreground">Pressione Enter para adicionar a URL da foto</p>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={addChecklistField}
+                disabled={!newChecklistField.trim()}
+              >
+                <Plus className="h-4 w-4" />
+              </Button>
             </div>
 
-            {formData.photos.length > 0 && (
-              <div className="grid grid-cols-2 gap-2 mt-2">
-                {formData.photos.map((photo, index) => (
-                  <div key={index} className="relative group">
-                    <img
-                      src={photo || "/placeholder.svg"}
-                      alt={`Foto ${index + 1}`}
-                      className="w-full h-20 object-cover rounded border"
-                    />
-                    <Button
-                      type="button"
-                      variant="destructive"
-                      size="sm"
-                      className="absolute top-1 right-1 h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                      onClick={() => handlePhotoRemove(index)}
-                    >
-                      ×
-                    </Button>
-                  </div>
-                ))}
+            {formData.checklistCampos.length > 0 && (
+              <div className="space-y-2">
+                <div className="flex flex-wrap gap-2">
+                  {formData.checklistCampos.map((campo, index) => (
+                    <Badge key={index} variant="secondary" className="flex items-center gap-1">
+                      {campo}
+                      <button
+                        type="button"
+                        onClick={() => removeChecklistField(index)}
+                        className="ml-1 hover:bg-destructive/20 rounded-full p-0.5"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {formData.checklistCampos.length} campo(s) configurado(s)
+                </p>
               </div>
             )}
           </div>
 
+          {error && (
+            <Alert variant="destructive">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isLoading}>
               Cancelar
             </Button>
             <Button type="submit" disabled={isLoading}>
