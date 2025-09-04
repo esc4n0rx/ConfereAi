@@ -1,34 +1,62 @@
 // components/admin/checklist-links.tsx
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
-import { Copy, Link, QrCode, Share2, ExternalLink } from "lucide-react"
+import { Copy, Link, QrCode, Share2, ExternalLink, CheckCircle } from "lucide-react"
 import { toast } from "sonner"
 
 export function ChecklistLinks() {
-  const [generatedLink, setGeneratedLink] = useState("")
-  const [generating, setGenerating] = useState(false)
+  const [permanentLink, setPermanentLink] = useState("")
+  const [loading, setLoading] = useState(false)
+  const [tokenExists, setTokenExists] = useState(false)
 
-  const generateChecklistLink = async () => {
+  useEffect(() => {
+    checkExistingToken()
+  }, [])
+
+  const checkExistingToken = async () => {
     try {
-      setGenerating(true)
-      
-      // Gerar token único
-      const token = `checklist_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-      const baseUrl = typeof window !== "undefined" ? window.location.origin : ""
-      const link = `${baseUrl}/checklist/${token}`
-      
-      setGeneratedLink(link)
-      toast.success("Link gerado com sucesso!")
+      const response = await fetch('/api/checklist/tokens')
+      const result = await response.json()
+
+      if (result.success && result.token) {
+        const baseUrl = typeof window !== "undefined" ? window.location.origin : ""
+        setPermanentLink(`${baseUrl}/preecher-checklist`)
+        setTokenExists(true)
+      }
     } catch (error) {
-      toast.error("Erro ao gerar link")
+      console.error('Erro ao verificar token existente:', error)
+    }
+  }
+
+  const generatePermanentLink = async () => {
+    try {
+      setLoading(true)
+      
+      const response = await fetch('/api/checklist/tokens', {
+        method: 'POST'
+      })
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Erro ao gerar link')
+      }
+
+      const baseUrl = typeof window !== "undefined" ? window.location.origin : ""
+      const link = `${baseUrl}/preecher-checklist`
+      
+      setPermanentLink(link)
+      setTokenExists(true)
+      toast.success("Link permanente gerado com sucesso!")
+    } catch (error: any) {
+      toast.error(error.message || "Erro ao gerar link")
     } finally {
-      setGenerating(false)
+      setLoading(false)
     }
   }
 
@@ -62,79 +90,96 @@ export function ChecklistLinks() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Link className="h-5 w-5" />
-          Link de Acesso ao Checklist Mobile
+          Link Permanente do Checklist Mobile
         </CardTitle>
         <CardDescription>
-          Gere links únicos para funcionários acessarem o checklist via celular
+          Gere um link permanente para funcionários acessarem o checklist via celular
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="space-y-4">
-          <Button 
-            onClick={generateChecklistLink}
-            disabled={generating}
-            className="w-full"
-          >
-            {generating ? "Gerando..." : "Gerar Novo Link"}
-          </Button>
-
-          {generatedLink && (
-            <div className="space-y-3">
-              <div className="space-y-2">
-                <Label htmlFor="generated-link">Link Gerado</Label>
-                <div className="flex gap-2">
-                  <Input
-                    id="generated-link"
-                    value={generatedLink}
-                    readOnly
-                    className="font-mono text-xs"
-                  />
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => copyToClipboard(generatedLink)}
-                  >
-                    <Copy className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => shareLink(generatedLink)}
-                  className="flex-1"
-                >
-                  <Share2 className="w-4 h-4 mr-2" />
-                  Compartilhar
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => window.open(generatedLink, '_blank')}
-                  className="flex-1"
-                >
-                  <ExternalLink className="w-4 h-4 mr-2" />
-                  Testar
-                </Button>
-              </div>
-
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                <p className="text-sm text-blue-700">
-                  <strong>Como usar:</strong>
-                </p>
-                <ol className="text-xs text-blue-600 mt-1 space-y-1 ml-4">
-                  <li>1. Compartilhe este link com os funcionários</li>
-                  <li>2. Funcionário acessa via celular e digita a matrícula</li>
-                  <li>3. Escolhe se vai retirar ou devolver equipamento</li>
-                  <li>4. Seleciona o equipamento e preenche o checklist</li>
-                  <li>5. Adiciona fotos e observações se necessário</li>
-                </ol>
+        {!tokenExists ? (
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Clique no botão abaixo para gerar um link permanente que funcionários podem usar
+              para preencher checklists de equipamentos.
+            </p>
+            <Button 
+              onClick={generatePermanentLink}
+              disabled={loading}
+              className="w-full"
+            >
+              {loading ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />
+                  Gerando link...
+                </>
+              ) : (
+                <>
+                  <Link className="h-4 w-4 mr-2" />
+                  Gerar Link Permanente
+                </>
+              )}
+            </Button>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg">
+              <CheckCircle className="h-5 w-5 text-green-600" />
+              <div>
+                <p className="font-medium text-green-800">Link Permanente Ativo</p>
+                <p className="text-sm text-green-600">Este link nunca expira e pode ser compartilhado</p>
               </div>
             </div>
-          )}
-        </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="permanent-link">Link Permanente</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="permanent-link"
+                  value={permanentLink}
+                  readOnly
+                  className="bg-gray-50"
+                />
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => copyToClipboard(permanentLink)}
+                >
+                  <Copy className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+
+            <div className="flex gap-2">
+              <Button
+                onClick={() => shareLink(permanentLink)}
+                className="flex-1"
+              >
+                <Share2 className="h-4 w-4 mr-2" />
+                Compartilhar
+              </Button>
+              
+              <Button
+                variant="outline"
+                onClick={() => window.open(permanentLink, '_blank')}
+                className="flex-1"
+              >
+                <ExternalLink className="h-4 w-4 mr-2" />
+                Testar Link
+              </Button>
+            </div>
+
+            <div className="bg-blue-50 border border-blue-200 p-3 rounded-lg">
+              <h4 className="font-medium text-blue-800 mb-1">Como usar:</h4>
+              <ul className="text-sm text-blue-700 space-y-1">
+                <li>• Compartilhe este link com funcionários</li>
+                <li>• O link funciona em qualquer dispositivo (celular/computador)</li>
+                <li>• Funcionários podem salvar como favorito</li>
+                <li>• Link nunca expira, sempre disponível</li>
+              </ul>
+            </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   )

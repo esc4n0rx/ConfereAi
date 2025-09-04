@@ -74,246 +74,166 @@ export function PhotoViewer({ photos, initialIndex, checklistCode, onClose }: Ph
     }
   }
 
-  const goToPrevious = () => {
+  const handlePrevious = () => {
     if (currentIndex > 0) {
       setCurrentIndex(currentIndex - 1)
     }
   }
 
-  const goToNext = () => {
+  const handleNext = () => {
     if (currentIndex < photos.length - 1) {
       setCurrentIndex(currentIndex + 1)
     }
   }
 
   const handleZoomIn = () => {
-    setZoom(prev => Math.min(prev * 1.2, 5))
+    setZoom(prev => Math.min(prev + 0.25, 3))
   }
 
   const handleZoomOut = () => {
-    setZoom(prev => Math.max(prev / 1.2, 0.1))
+    setZoom(prev => Math.max(prev - 0.25, 0.25))
   }
 
   const handleRotate = () => {
-    setRotation(prev => (prev + 90) % 360)
+    setRotation(prev => prev + 90)
   }
 
-  const resetTransform = () => {
-    setZoom(1)
-    setRotation(0)
-  }
-
-  const downloadImage = async () => {
+  const handleDownload = async () => {
     if (!imageUrl) return
 
     try {
-      const currentPhoto = photos[currentIndex]
       const response = await fetch(imageUrl)
       const blob = await response.blob()
+      const url = URL.createObjectURL(blob)
       
-      const downloadUrl = URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      link.href = downloadUrl
-      link.download = `${checklistCode}_foto_${currentIndex + 1}.jpg`
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      URL.revokeObjectURL(downloadUrl)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${checklistCode}_foto_${currentIndex + 1}.jpg`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      
+      URL.revokeObjectURL(url)
     } catch (err) {
       console.error('Erro ao baixar imagem:', err)
     }
   }
 
-  const handleKeyDown = (e: KeyboardEvent) => {
-    switch (e.key) {
-      case 'ArrowLeft':
-        e.preventDefault()
-        goToPrevious()
-        break
-      case 'ArrowRight':
-        e.preventDefault()
-        goToNext()
-        break
-      case 'Escape':
-        e.preventDefault()
-        onClose()
-        break
-      case '+':
-      case '=':
-        e.preventDefault()
-        handleZoomIn()
-        break
-      case '-':
-        e.preventDefault()
-        handleZoomOut()
-        break
-      case 'r':
-      case 'R':
-        e.preventDefault()
-        handleRotate()
-        break
+  const handleClose = () => {
+    if (imageUrl) {
+      URL.revokeObjectURL(imageUrl)
     }
+    onClose()
   }
 
+  // Cleanup no unmount
   useEffect(() => {
-    document.addEventListener('keydown', handleKeyDown)
     return () => {
-      document.removeEventListener('keydown', handleKeyDown)
-      // Limpar URL quando componente desmontar
       if (imageUrl) {
         URL.revokeObjectURL(imageUrl)
       }
     }
-  }, [currentIndex, imageUrl])
-
-  const currentPhoto = photos[currentIndex]
+  }, [imageUrl])
 
   return (
-    <Dialog open={true} onOpenChange={onClose}>
-      <DialogContent className="max-w-7xl h-[90vh] p-0 bg-black">
-        {/* Header com controles */}
-        <div className="absolute top-0 left-0 right-0 z-10 bg-black bg-opacity-75 text-white p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <span className="text-sm font-medium">
-                {currentIndex + 1} de {photos.length}
-              </span>
-              <span className="text-xs text-gray-300">
-                {new Date(currentPhoto.created_at).toLocaleString('pt-BR')}
-              </span>
-            </div>
+    <Dialog open={true} onOpenChange={handleClose}>
+      <DialogContent className="max-w-7xl max-h-[95vh] p-0">
+        {/* Header */}
+        <div className="flex items-center justify-between p-4 border-b bg-white">
+          <div className="flex items-center gap-4">
+            <h3 className="font-semibold">
+              Foto {currentIndex + 1} de {photos.length}
+            </h3>
+            <span className="text-sm text-gray-500">{checklistCode}</span>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={handleZoomOut}>
+              <ZoomOut className="h-4 w-4" />
+            </Button>
             
-            <div className="flex items-center gap-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleZoomOut}
-                disabled={zoom <= 0.1}
-                className="text-white hover:bg-white hover:bg-opacity-20"
-              >
-                <ZoomOut className="w-4 h-4" />
-              </Button>
-              
-              <span className="text-xs px-2">
-                {Math.round(zoom * 100)}%
-              </span>
-              
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleZoomIn}
-                disabled={zoom >= 5}
-                className="text-white hover:bg-white hover:bg-opacity-20"
-              >
-                <ZoomIn className="w-4 h-4" />
-              </Button>
-              
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleRotate}
-                className="text-white hover:bg-white hover:bg-opacity-20"
-              >
-                <RotateCw className="w-4 h-4" />
-              </Button>
-              
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={resetTransform}
-                className="text-white hover:bg-white hover:bg-opacity-20"
-              >
-                Reset
-              </Button>
-              
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={downloadImage}
-                disabled={!imageUrl}
-                className="text-white hover:bg-white hover:bg-opacity-20"
-              >
-                <Download className="w-4 h-4" />
-              </Button>
-              
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={onClose}
-                className="text-white hover:bg-white hover:bg-opacity-20"
-              >
-                <X className="w-4 h-4" />
-              </Button>
-            </div>
+            <span className="text-sm font-mono w-12 text-center">
+              {Math.round(zoom * 100)}%
+            </span>
+            
+            <Button variant="outline" size="sm" onClick={handleZoomIn}>
+              <ZoomIn className="h-4 w-4" />
+            </Button>
+            
+            <Button variant="outline" size="sm" onClick={handleRotate}>
+              <RotateCw className="h-4 w-4" />
+            </Button>
+            
+            <Button variant="outline" size="sm" onClick={handleDownload}>
+              <Download className="h-4 w-4" />
+            </Button>
+            
+            <Button variant="outline" size="sm" onClick={handleClose}>
+              <X className="h-4 w-4" />
+            </Button>
           </div>
         </div>
 
-        {/* Área da imagem */}
-        <div className="relative w-full h-full flex items-center justify-center overflow-hidden">
-          {loading && (
-            <div className="flex flex-col items-center gap-4">
-              <Loader2 className="w-8 h-8 animate-spin text-white" />
-              <span className="text-white">Carregando imagem...</span>
+        {/* Image Container */}
+        <div className="flex-1 relative bg-gray-900 overflow-hidden" style={{ height: 'calc(95vh - 120px)' }}>
+          {loading ? (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="text-center text-white">
+                <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4" />
+                <p>Carregando imagem...</p>
+              </div>
             </div>
-          )}
-
-          {error && (
-            <div className="flex flex-col items-center gap-4">
-              <AlertCircle className="w-8 h-8 text-red-400" />
-              <span className="text-white">Erro ao carregar imagem</span>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={loadCurrentImage}
-                className="text-black"
-              >
-                Tentar Novamente
-              </Button>
+          ) : error ? (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="text-center text-white">
+                <AlertCircle className="w-8 h-8 mx-auto mb-4 text-red-400" />
+                <p>Erro ao carregar imagem</p>
+              </div>
             </div>
-          )}
+          ) : imageUrl ? (
+            <div className="absolute inset-0 flex items-center justify-center overflow-auto">
+              <img
+                src={imageUrl}
+                alt={`Foto ${currentIndex + 1}`}
+                className="max-w-none"
+                style={{
+                  transform: `scale(${zoom}) rotate(${rotation}deg)`,
+                  transition: 'transform 0.2s ease-in-out'
+                }}
+              />
+            </div>
+          ) : null}
 
-          {imageUrl && !loading && !error && (
-            <img
-              src={imageUrl}
-              alt={`Foto ${currentIndex + 1}`}
-              className="max-w-full max-h-full object-contain transition-transform duration-200"
-              style={{
-                transform: `scale(${zoom}) rotate(${rotation}deg)`,
-                transformOrigin: 'center'
-              }}
-            />
-          )}
-
-          {/* Navegação */}
+          {/* Navigation arrows */}
           {photos.length > 1 && (
             <>
               <Button
-                variant="ghost"
-                size="lg"
-                onClick={goToPrevious}
+                variant="outline"
+                size="icon"
+                className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-white/90 hover:bg-white"
+                onClick={handlePrevious}
                 disabled={currentIndex === 0}
-                className="absolute left-4 top-1/2 -translate-y-1/2 text-white hover:bg-white hover:bg-opacity-20 disabled:opacity-30"
               >
-                <ChevronLeft className="w-8 h-8" />
+                <ChevronLeft className="h-4 w-4" />
               </Button>
               
               <Button
-                variant="ghost"
-                size="lg"
-                onClick={goToNext}
+                variant="outline"
+                size="icon"
+                className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-white/90 hover:bg-white"
+                onClick={handleNext}
                 disabled={currentIndex === photos.length - 1}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-white hover:bg-white hover:bg-opacity-20 disabled:opacity-30"
               >
-                <ChevronRight className="w-8 h-8" />
+                <ChevronRight className="h-4 w-4" />
               </Button>
             </>
           )}
         </div>
 
-        {/* Thumbnails na parte inferior */}
+        {/* Thumbnail strip */}
         {photos.length > 1 && (
-          <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-75 p-4">
-            <div className="flex justify-center gap-2 overflow-x-auto max-w-full">
+          <div className="p-4 border-t bg-white">
+            <div className="flex gap-2 overflow-x-auto pb-2">
               {photos.map((photo, index) => (
                 <button
                   key={photo.id}

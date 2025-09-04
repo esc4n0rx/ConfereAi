@@ -3,7 +3,6 @@ import { createServerClient } from '@/lib/supabase/server'
 import type { Database } from '@/lib/supabase/client'
 import type { 
   ChecklistData, 
-  CreateChecklistData, 
   DatabaseEmployee, 
   DatabaseEquipment,
   ChecklistPhoto
@@ -15,10 +14,34 @@ export class ChecklistAPI {
     try {
       const supabase = createServerClient()
       
-      // Gerar token único
-      const token = `checklist_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-      
-      return { token }
+      // Verificar se o token permanente já existe
+      const { data: existingToken } = await supabase
+        .from('confereai_checklist_tokens')
+        .select('token')
+        .eq('token', 'preecher-checklist')
+        .eq('is_active', true)
+        .single()
+
+      if (existingToken) {
+        return { token: existingToken.token }
+      }
+
+      // Criar token permanente se não existir
+      const { data: newToken, error } = await supabase
+        .from('confereai_checklist_tokens')
+        .insert({
+          token: 'preecher-checklist',
+          is_active: true,
+          expires_at: null
+        })
+        .select('token')
+        .single()
+
+      if (error) {
+        throw new Error(error.message)
+      }
+
+      return { token: newToken.token }
     } catch (error) {
       console.error('Erro ao gerar token de checklist:', error)
       throw new Error('Erro ao gerar token de checklist')
@@ -27,8 +50,20 @@ export class ChecklistAPI {
 
   static async validateToken(token: string): Promise<{ valid: boolean }> {
     try {
-      // Por simplicidade, validamos se o token tem o formato correto
-      // Em produção, você poderia armazenar tokens em uma tabela
+      const supabase = createServerClient()
+
+      if (token === 'preecher-checklist') {
+        // Verificar se o token permanente está ativo
+        const { data: tokenData } = await supabase
+          .from('confereai_checklist_tokens')
+          .select('is_active')
+          .eq('token', token)
+          .single()
+
+        return { valid: tokenData?.is_active || false }
+      }
+
+      // Para tokens temporários (compatibilidade)
       if (!token || !token.startsWith('checklist_')) {
         return { valid: false }
       }
@@ -77,49 +112,64 @@ export class ChecklistAPI {
         throw new Error(takingError.message)
       }
 
-      const takingEquipmentIds = (takingChecklistsData || []).map(c => c.equipment_id)
-
-      if (takingEquipmentIds.length === 0) {
-        return []
-      }
-
-      // Buscar devoluções para estes equipamentos
       const { data: returningChecklistsData, error: returningError } = await supabase
         .from('confereai_checklists')
         .select('equipment_id')
         .eq('employee_id', employeeId)
         .eq('action', 'returning')
-        .in('equipment_id', takingEquipmentIds)
 
       if (returningError) {
         throw new Error(returningError.message)
       }
 
-      const returnedEquipmentIds = (returningChecklistsData || []).map(c => c.equipment_id)
-      
-      // Equipamentos que foram pegos mas não devolvidos
-      const inUseEquipmentIds = takingEquipmentIds.filter(id => !returnedEquipmentIds.includes(id))
+      const takingEquipments = new Set(takingChecklistsData?.map(c => c.equipment_id) || [])
+      const returningEquipments = new Set(returningChecklistsData?.map(c => c.equipment_id) || [])
 
-      if (inUseEquipmentIds.length === 0) {
+      const equipmentsInUse = Array.from(takingEquipments).filter(
+        equipId => !returningEquipments.has(equipId)
+      )
+
+      if (equipmentsInUse.length === 0) {
         return []
       }
 
-      // Buscar dados dos equipamentos em uso
-      const { data: equipments, error: equipError } = await supabase
+      const { data: equipments, error } = await supabase
         .from('confereai_equipments')
         .select('*')
-        .in('id', inUseEquipmentIds)
+        .in('id', equipmentsInUse)
         .eq('is_active', true)
         .order('nome')
 
-      if (equipError) {
-        throw new Error(equipError.message)
+      if (error) {
+        throw new Error(error.message)
       }
 
       return equipments || []
     } catch (error) {
-      console.error('Erro ao buscar equipamentos em uso pelo funcionário:', error)
+      console.error('Erro ao buscar equipamentos em uso:', error)
       throw error
+    }
+  }
+
+  static async validateEmployee(nome: string): Promise<DatabaseEmployee | null> {
+    try {
+      const supabase = createServerClient()
+      
+      const { data: employee, error } = await supabase
+        .from('confereai_employees')
+        .select('*')
+        .ilike('nome', nome)
+        .eq('is_active', true)
+        .single()
+
+      if (error || !employee) {
+        return null
+      }
+
+      return employee
+    } catch (error) {
+      console.error('Erro ao validar funcionário:', error)
+      return null
     }
   }
 
@@ -128,8 +178,9 @@ export class ChecklistAPI {
       const supabase = createServerClient()
       
       // Gerar código único
-      const codigo = `CHK_${Date.now()}_${Math.random().toString(36).substr(2, 5).toUpperCase()}`
-      
+      const timestamp = new Date().getTime()
+      const codigo = `CHK_${timestamp}`
+
       const { data: checklist, error } = await supabase
         .from('confereai_checklists')
         .insert({
