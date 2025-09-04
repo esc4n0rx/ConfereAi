@@ -194,6 +194,7 @@ export function useChecklist() {
 
   return {
     state,
+    setState,
     loading,
     error,
     setEmployee,
