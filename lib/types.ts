@@ -36,7 +36,7 @@ export interface EquipmentNew {
   nome: string
   descricao: string
   codigo?: string
-  status: "disponivel" | "manutencao" | "quebrado" | "inativo"
+  status: "disponivel" | "manutencao" | "quebrado" | "inativo" | "em_uso"
   checklistCampos: string[]
   createdAt: Date
   updatedAt: Date
