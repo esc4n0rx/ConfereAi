@@ -13,7 +13,7 @@ export class WhatsAppWebhookAPI {
   /**
    * Processa resposta de aprovação recebida via WhatsApp
    */
-  static async processApprovalResponse(
+   static async processApprovalResponse(
     phoneNumber: string,
     approved: boolean,
     timestamp?: string
@@ -35,16 +35,31 @@ export class WhatsAppWebhookAPI {
         .single()
 
       if (managerError || !manager) {
-        console.log('❌ Encarregado não encontrado para o telefone:', formattedPhone)
-        return {
-          success: false,
-          error: 'Encarregado não encontrado para este número'
+        // ADICIONAL: Tentar buscar sem formatação também
+        const { data: managerAlt, error: managerAltError } = await supabase
+          .from('confereai_managers')
+          .select('id, nome, telefone')
+          .eq('telefone', phoneNumber)
+          .eq('is_active', true)
+          .single()
+
+        if (managerAltError || !managerAlt) {
+          console.log('❌ Encarregado não encontrado para os telefones:', formattedPhone, phoneNumber)
+          return {
+            success: false,
+            error: `Encarregado não encontrado para este número: ${phoneNumber}`
+          }
         }
+        
+        // Usar o manager encontrado na busca alternativa
+        manager.id = managerAlt.id
+        manager.nome = managerAlt.nome
+        manager.telefone = managerAlt.telefone
       }
 
       console.log(`✅ Encarregado encontrado: ${manager.nome}`)
 
-      // Buscar aprovação pendente mais recente para este encarregado
+      // CORRIGIDO: Buscar aprovação pendente com JOIN correto
       const { data: pendingApproval, error: approvalError } = await supabase
         .from('confereai_checklist_approvals')
         .select(`
@@ -74,7 +89,8 @@ export class WhatsAppWebhookAPI {
         pendingApproval.checklist_id,
         manager.id,
         approved,
-        `Resposta via WhatsApp: ${approved ? 'APROVADO' : 'REJEITADO'}`
+        `Resposta via WhatsApp: ${approved ? 'APROVADO' : 'REJEITADO'}`,
+        'whatsapp' // IMPORTANTE: marcar como origem WhatsApp
       )
 
       console.log(`✅ Aprovação processada com sucesso: ${checklistCodigo} - ${approved ? 'APROVADO' : 'REJEITADO'}`)

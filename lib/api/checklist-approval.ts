@@ -71,6 +71,22 @@ export class ChecklistApprovalAPI {
     }
   }
 
+  Perfeito! Agora o bot está funcionando, mas temos 2 erros no processamento da aprovação. Vamos corrigi-los:
+🔍 Análise dos Erros
+Erro 1: Check constraint confereai_checklist_approvals_status_check
+
+O banco não aceita o status 'superseded' que estamos tentando inserir
+Precisa ajustar a constraint ou usar status válido
+
+Erro 2: UUID inválido "undefined"
+
+Estamos passando undefined como equipment_id na atualização do equipamento
+Precisa buscar o equipment_id corretamente
+
+🛠️ Correções Necessárias
+1. Corrigir o ChecklistApprovalAPI (lib/api/checklist-approval.ts)
+typescript// lib/api/checklist-approval.ts (CORRIGIR o método processApprovalResponse)
+export class ChecklistApprovalAPI {
   static async processApprovalResponse(
     checklistId: string,
     managerId: string,
@@ -122,11 +138,12 @@ export class ChecklistApprovalAPI {
         throw new Error(approvalError.message)
       }
 
-      // Marcar outras aprovações pendentes como "superseded" (opcional)
+      // CORRIGIDO: Marcar outras aprovações pendentes como "rejected" ao invés de "superseded"
       const { error: updateOthersError } = await supabase
         .from('confereai_checklist_approvals')
         .update({
-          status: 'superseded',
+          status: 'rejected', // MUDANÇA: usar 'rejected' ao invés de 'superseded'
+          response_message: `Automaticamente rejeitado - já processado por outro encarregado`,
           updated_at: new Date().toISOString()
         })
         .eq('checklist_id', checklistId)
@@ -164,12 +181,13 @@ export class ChecklistApprovalAPI {
         throw new Error(checklistError.message)
       }
 
-      // Buscar dados do checklist e outros encarregados para notificação
+      // CORRIGIDO: Buscar dados completos do checklist incluindo equipment_id
       const { data: checklist, error: checklistDataError } = await supabase
         .from('confereai_checklists')
         .select(`
           codigo,
           action,
+          equipment_id,
           confereai_employees!employee_id(nome),
           confereai_equipments!equipment_id(nome)
         `)
@@ -181,8 +199,8 @@ export class ChecklistApprovalAPI {
       }
 
       // Atualizar status do equipamento se aprovado
-      if (approved) {
-        await this.updateEquipmentStatus(checklist, manager.nome)
+      if (approved && checklist.equipment_id) {
+        await this.updateEquipmentStatus(checklist.equipment_id, checklist.action, manager.nome)
       }
 
       const allManagers = await ManagersAPI.getAllManagers()
@@ -212,21 +230,29 @@ export class ChecklistApprovalAPI {
     }
   }
 
-  // NOVO MÉTODO: Atualizar status do equipamento baseado na aprovação
   private static async updateEquipmentStatus(
-    checklist: any,
+    equipmentId: string,
+    action: 'taking' | 'returning',
     approvedBy: string
   ): Promise<void> {
     try {
       const supabase = createServerClient()
       
+      // Verificar se equipmentId é válido
+      if (!equipmentId || equipmentId === 'undefined') {
+        console.error('❌ Equipment ID inválido:', equipmentId)
+        return
+      }
+      
       // Determinar novo status do equipamento
       let newStatus = 'available'
-      if (checklist.action === 'taking') {
+      if (action === 'taking') {
         newStatus = 'in_use'
-      } else if (checklist.action === 'returning') {
+      } else if (action === 'returning') {
         newStatus = 'available'
       }
+
+      console.log(`📦 Atualizando equipamento ${equipmentId} para status: ${newStatus}`)
 
       const { error } = await supabase
         .from('confereai_equipments')
@@ -234,17 +260,18 @@ export class ChecklistApprovalAPI {
           status: newStatus,
           updated_at: new Date().toISOString()
         })
-        .eq('id', checklist.equipment_id)
+        .eq('id', equipmentId)
 
       if (error) {
         console.error('Erro ao atualizar status do equipamento:', error)
       } else {
-        console.log(`📦 Status do equipamento atualizado para: ${newStatus}`)
+        console.log(`✅ Status do equipamento ${equipmentId} atualizado para: ${newStatus} por ${approvedBy}`)
       }
     } catch (error) {
       console.error('Erro ao atualizar status do equipamento:', error)
     }
   }
+
 
   static async getPendingApprovals(): Promise<any[]> {
     try {
