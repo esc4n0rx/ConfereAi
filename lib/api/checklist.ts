@@ -331,3 +331,4 @@ export class ChecklistAPI {
     return { valid: false }
   }
 }
+}
