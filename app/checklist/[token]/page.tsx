@@ -42,7 +42,8 @@ export default function ChecklistPage() {
     toggleIssue,
     reset,
     validateEmployee,
-    submitChecklist
+    submitChecklist,
+    goBack,
   } = useChecklist()
 
   // Configurações mobile sempre executadas
@@ -127,24 +128,7 @@ export default function ChecklistPage() {
 
   // Função para voltar para etapa anterior
   const handleBack = () => {
-    switch (state.step) {
-      case 'action':
-        useState(prev => ({ ...prev, step: 'validation', action: null }))
-        break
-      case 'equipment':
-        useState(prev => ({ ...prev, step: 'action', equipment: null }))
-        break
-      case 'checklist':
-        useState(prev => ({ 
-          ...prev, 
-          step: 'equipment', 
-          responses: {}, 
-          observations: '', 
-          photos: [], 
-          hasIssues: false 
-        }))
-        break
-    }
+    goBack();
   }
 
   // Loading de validação do token

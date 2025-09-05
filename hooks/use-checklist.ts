@@ -1,6 +1,6 @@
-// hooks/use-checklist.ts
+
 import { useState, useCallback } from 'react';
-import imageCompression from 'browser-image-compression'; // <-- ADICIONADO
+import imageCompression from 'browser-image-compression';
 import type {
   MobileChecklistState,
   DatabaseEmployee,
@@ -248,6 +248,29 @@ export function useChecklist() {
     }
   }, [state, convertFileToBase64]);
 
+  const goBack = useCallback(() => {
+    setState((prev) => {
+      switch (prev.step) {
+        case 'action':
+          return { ...prev, step: 'validation', employee: null, action: null };
+        case 'equipment':
+          return { ...prev, step: 'action', action: null, equipment: null };
+        case 'checklist':
+          return {
+            ...prev,
+            step: 'equipment',
+            equipment: null,
+            responses: {},
+            observations: '',
+            photos: [],
+            hasIssues: false,
+          };
+        default:
+          return prev;
+      }
+    });
+  }, []);
+
   return {
     state,
     setState,
@@ -264,5 +287,6 @@ export function useChecklist() {
     reset,
     validateEmployee,
     submitChecklist,
+    goBack,
   };
 }
