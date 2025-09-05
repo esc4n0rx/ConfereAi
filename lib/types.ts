@@ -256,3 +256,16 @@ export interface ChecklistDataWithStatus extends ChecklistData {
   status: 'pending' | 'approved' | 'rejected' | 'completed'
   approval_status?: 'pending' | 'approved' | 'rejected'
 }
+
+export interface WhatsAppWebhookRequest {
+  phoneNumber: string
+  approved: boolean
+  timestamp?: string
+}
+
+export interface WhatsAppWebhookResponse {
+  success: boolean
+  error?: string
+  checklistCodigo?: string
+  manager?: string
+}
