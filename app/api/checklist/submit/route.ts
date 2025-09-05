@@ -6,7 +6,6 @@ import type { ChecklistData } from '@/lib/types'
 
 export async function POST(request: NextRequest) {
   try {
-    // Melhor tratamento de parsing do JSON
     let body
     try {
       body = await request.json()
@@ -180,7 +179,8 @@ async function uploadPhotos(photosBase64: string[], checklistCode: string): Prom
         const uploadResult = await uploadResponse.json()
         console.log(`Upload da foto ${i + 1} concluído:`, uploadResult)
         
-        const photoUrl = `/api/photos/${folderName}/${filename}`
+        const realFilename = uploadResult.files[0]
+        const photoUrl = `${uploadApiUrl}/files/${folderName}/${realFilename}`
         
         uploadResults.push({
           url: photoUrl,

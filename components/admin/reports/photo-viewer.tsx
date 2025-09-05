@@ -45,13 +45,16 @@ export function PhotoViewer({ photos, initialIndex, checklistCode, onClose }: Ph
 
       const currentPhoto = photos[currentIndex]
       
-      // Extrair folder e filename da URL da foto
-      const url = new URL(currentPhoto.photo_url)
-      const pathParts = url.pathname.split('/')
-      const folder = pathParts[pathParts.length - 2]
-      const filename = pathParts[pathParts.length - 1]
-
-      const response = await fetch(`/api/photos/${folder}/${filename}`)
+      // ✅ MUDANÇA PRINCIPAL: Usar URL direta da API externa com token
+      const response = await fetch('/api/upload/fetch-image', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          imageUrl: currentPhoto.photo_url
+        })
+      })
       
       if (!response.ok) {
         throw new Error('Erro ao carregar imagem')
@@ -59,7 +62,6 @@ export function PhotoViewer({ photos, initialIndex, checklistCode, onClose }: Ph
 
       const blob = await response.blob()
       
-      // Limpar URL anterior se existir
       if (imageUrl) {
         URL.revokeObjectURL(imageUrl)
       }

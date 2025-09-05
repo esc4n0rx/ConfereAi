@@ -424,32 +424,34 @@ function PhotoThumbnail({ photo, checklistCode, index, onClick }: PhotoThumbnail
  }, [photo.photo_url])
 
  const loadThumbnail = async () => {
-   try {
-     setLoading(true)
-     setError(false)
+  try {
+    setLoading(true)
+    setError(false)
 
-     // Extrair folder e filename da URL da foto
-     const url = new URL(photo.photo_url)
-     const pathParts = url.pathname.split('/')
-     const folder = pathParts[pathParts.length - 2]
-     const filename = pathParts[pathParts.length - 1]
+    const response = await fetch('/api/upload/fetch-image', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        imageUrl: photo.photo_url
+      })
+    })
+    
+    if (!response.ok) {
+      throw new Error('Erro ao carregar imagem')
+    }
 
-     const response = await fetch(`/api/photos/${folder}/${filename}`)
-     
-     if (!response.ok) {
-       throw new Error('Erro ao carregar imagem')
-     }
-
-     const blob = await response.blob()
-     const imageUrl = URL.createObjectURL(blob)
-     setThumbnailUrl(imageUrl)
-   } catch (err) {
-     console.error('Erro ao carregar thumbnail:', err)
-     setError(true)
-   } finally {
-     setLoading(false)
-   }
- }
+    const blob = await response.blob()
+    const imageUrl = URL.createObjectURL(blob)
+    setThumbnailUrl(imageUrl)
+  } catch (err) {
+    console.error('Erro ao carregar thumbnail:', err)
+    setError(true)
+  } finally {
+    setLoading(false)
+  }
+}
 
  if (loading) {
    return (
