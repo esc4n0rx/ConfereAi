@@ -1,43 +1,43 @@
+/* app/globals.css */
 @import "tailwindcss";
 @import "tw-animate-css";
 
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  /* Updated color tokens to match equipment management design brief */
-  --background: oklch(1 0 0); /* #ffffff - Clean white background */
-  --foreground: oklch(0.278 0.013 258.338); /* #374151 - Dark gray text */
-  --card: oklch(0.984 0.024 142.495); /* #f0fdf4 - Soft green background for cards */
-  --card-foreground: oklch(0.278 0.013 258.338); /* #374151 - Text in cards */
-  --popover: oklch(1 0 0); /* #ffffff - Popover background */
-  --popover-foreground: oklch(0.278 0.013 258.338); /* #374151 - Popover text */
-  --primary: oklch(0.506 0.177 152.028); /* #15803d - Green primary color */
-  --primary-foreground: oklch(1 0 0); /* #ffffff - White text on primary */
-  --secondary: oklch(0.748 0.204 110.725); /* #84cc16 - Vibrant green accent */
-  --secondary-foreground: oklch(1 0 0); /* #ffffff - White text on secondary */
-  --muted: oklch(0.984 0.024 142.495); /* #f0fdf4 - Muted green background */
-  --muted-foreground: oklch(0.318 0.017 258.338); /* #4b5563 - Muted text */
-  --accent: oklch(0.748 0.204 110.725); /* #84cc16 - Accent highlights */
-  --accent-foreground: oklch(1 0 0); /* #ffffff - White text on accent */
-  --destructive: oklch(0.548 0.227 27.325); /* #dc2626 - Red for errors */
-  --destructive-foreground: oklch(1 0 0); /* #ffffff - White text on destructive */
-  --border: oklch(0.922 0.013 258.338); /* #e5e7eb - Light gray borders */
-  --input: oklch(0.98 0.013 258.338); /* #f9fafb - Input background */
-  --ring: oklch(0.506 0.177 152.028 / 0.5); /* Primary color with opacity for focus */
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
   --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --radius: 0.5rem; /* Rounded corners */
-  --sidebar: oklch(0.984 0.024 142.495); /* #f0fdf4 - Sidebar background */
-  --sidebar-foreground: oklch(0.278 0.013 258.338); /* #374151 - Sidebar text */
-  --sidebar-primary: oklch(0.506 0.177 152.028); /* #15803d - Sidebar primary */
-  --sidebar-primary-foreground: oklch(1 0 0); /* #ffffff - Sidebar primary text */
-  --sidebar-accent: oklch(0.748 0.204 110.725); /* #84cc16 - Sidebar accent */
-  --sidebar-accent-foreground: oklch(1 0 0); /* #ffffff - Sidebar accent text */
-  --sidebar-border: oklch(0.922 0.013 258.338); /* #e5e7eb - Sidebar borders */
-  --sidebar-ring: oklch(0.506 0.177 152.028 / 0.5); /* Sidebar focus ring */
+  --chart-3: oklch(0.398 0.07 227.392);
+  --chart-4: oklch(0.828 0.189 84.429);
+  --chart-5: oklch(0.769 0.188 70.08);
+  --radius: 0.625rem;
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
 }
 
 .dark {
@@ -47,32 +47,32 @@
   --card-foreground: oklch(0.985 0 0);
   --popover: oklch(0.145 0 0);
   --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.748 0.204 110.725); /* Brighter green for dark mode */
-  --primary-foreground: oklch(0.145 0 0);
-  --secondary: oklch(0.506 0.177 152.028);
+  --primary: oklch(0.985 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
   --secondary-foreground: oklch(0.985 0 0);
   --muted: oklch(0.269 0 0);
   --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.748 0.204 110.725);
-  --accent-foreground: oklch(0.145 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
   --destructive: oklch(0.396 0.141 25.723);
   --destructive-foreground: oklch(0.637 0.237 25.331);
   --border: oklch(0.269 0 0);
   --input: oklch(0.269 0 0);
-  --ring: oklch(0.748 0.204 110.725 / 0.5);
+  --ring: oklch(0.439 0 0);
   --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.6 0.17 162.48);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
+  --chart-2: oklch(0.696 0.17 162.48);
+  --chart-3: oklch(0.769 0.188 70.08);
+  --chart-4: oklch(0.627 0.265 303.9);
+  --chart-5: oklch(0.645 0.246 16.439);
   --sidebar: oklch(0.205 0 0);
   --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.748 0.204 110.725);
-  --sidebar-primary-foreground: oklch(0.145 0 0);
-  --sidebar-accent: oklch(0.506 0.177 152.028);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(0.269 0 0);
-  --sidebar-ring: oklch(0.748 0.204 110.725 / 0.5);
+  --sidebar-ring: oklch(0.439 0 0);
 }
 
 @theme inline {
@@ -116,323 +116,11 @@
   --color-sidebar-ring: var(--sidebar-ring);
 }
 
-/* Base styles - usando classes nativas sem variáveis CSS problemáticas */
-* {
-  @apply outline-2 outline-offset-2 outline-transparent;
-}
-
-body {
-  @apply bg-white text-gray-700;
-  color: oklch(var(--foreground));
-  background: oklch(var(--background));
-}
-
-.dark body {
-  @apply bg-gray-900 text-gray-100;
-}
-
-/* Melhorias para páginas mobile do checklist */
-.mobile-checklist {
-  /* Configurações base para mobile */
-  touch-action: manipulation;
-  -webkit-tap-highlight-color: transparent;
-  -webkit-touch-callout: none;
-  -webkit-user-select: none;
-  user-select: none;
-}
-
-/* Container principal mobile com scroll otimizado */
-.mobile-container {
-  height: 100vh;
-  height: 100dvh; /* Dynamic Viewport Height para mobile */
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
-}
-
-/* Header fixo mobile */
-.mobile-header {
-  flex-shrink: 0;
-  position: relative;
-  z-index: 10;
-}
-
-/* Área de conteúdo scrollável */
-.mobile-content {
-  flex: 1;
-  overflow-y: auto;
-  overflow-x: hidden;
-  -webkit-overflow-scrolling: touch;
-  scroll-behavior: smooth;
-}
-
-/* Footer fixo mobile */
-.mobile-footer {
-  flex-shrink: 0;
-  position: relative;
-  z-index: 10;
-}
-
-/* Melhorias específicas para mobile */
-@media (max-width: 768px) {
-  /* Prevenir zoom em inputs iOS */
-  .mobile-checklist input,
-  .mobile-checklist textarea,
-  .mobile-checklist select {
-    font-size: 16px !important;
-    border-radius: 8px;
-    transition: border-color 0.2s, box-shadow 0.2s;
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
   }
-  
-  .mobile-checklist input:focus,
-  .mobile-checklist textarea:focus,
-  .mobile-checklist select:focus {
-    outline: none;
-    border-color: oklch(var(--primary));
-    box-shadow: 0 0 0 2px oklch(var(--primary) / 0.2);
-  }
-  
-  /* Melhorar botões touch */
-  .mobile-checklist button {
-    min-height: 48px;
-    min-width: 48px;
-    font-size: 16px;
-    touch-action: manipulation;
-    position: relative;
-  }
-  
-  /* Feedback tátil para botões */
-  .mobile-checklist button:active {
-    transform: scale(0.98);
-    transition: transform 0.1s;
-  }
-  
-  /* Cards otimizados para mobile */
-  .mobile-card {
-    margin: 0 -1rem;
-    border-radius: 0;
-    border-left: none;
-    border-right: none;
-  }
-  
-  /* Layout responsivo para equipamentos */
-  .equipment-grid {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 0.75rem;
-  }
-  
-  /* Checklist form compacto */
-  .checklist-compact {
-    padding: 0.75rem;
-    gap: 0.75rem;
-  }
-  
-  /* Headers menores em mobile */
-  .mobile-checklist h1 {
-    font-size: 1.25rem;
-    line-height: 1.75rem;
-  }
-  
-  .mobile-checklist h2 {
-    font-size: 1.125rem;
-    line-height: 1.5rem;
-  }
-  
-  /* Badges menores */
-  .mobile-badge {
-    padding: 0.25rem 0.5rem;
-    font-size: 0.75rem;
+  body {
+    @apply bg-background text-foreground;
   }
 }
-
-/* Landscape mobile adjustments */
-@media (orientation: landscape) and (max-height: 500px) {
-  .mobile-container {
-    padding: 0.5rem;
-  }
-  
-  .mobile-header {
-    padding: 0.5rem 0;
-  }
-  
-  .mobile-footer {
-    padding: 0.5rem 0;
-  }
-}
-
-/* Animações suaves */
-.mobile-transition {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-/* Scroll personalizado */
-.custom-scrollbar {
-  scrollbar-width: thin;
-  scrollbar-color: rgb(156 163 175 / 0.3) transparent;
-}
-
-.custom-scrollbar::-webkit-scrollbar {
-  width: 6px;
-}
-
-.custom-scrollbar::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  background-color: rgb(156 163 175 / 0.3);
-  border-radius: 3px;
-}
-
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background-color: rgb(156 163 175 / 0.5);
-}
-
-/* Loading states específicos para mobile */
-.mobile-loading {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 200px;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-/* Error states para mobile */
-.mobile-error {
-  padding: 1rem;
-  text-align: center;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1rem;
-}
-
-/* app/globals.css - Adicionar ao final do arquivo */
-
-/* Estilos específicos para modal de confirmação mobile */
-.mobile-confirmation-modal {
-  /* Garantir que o modal não seja maior que a viewport */
-  max-height: 85vh;
-  max-width: calc(100vw - 2rem);
-  overflow: hidden;
- }
- 
- /* Ajustes específicos para DialogContent em mobile */
- @media (max-width: 768px) {
-  [data-slot="dialog-content"] {
-    width: calc(100vw - 2rem) !important;
-    max-width: 400px !important;
-    max-height: 85vh !important;
-    margin: 1rem !important;
-    padding: 1rem !important;
-    gap: 1rem !important;
-  }
-  
-  /* Garantir que o overlay seja clicável */
-  [data-slot="dialog-overlay"] {
-    background-color: rgba(0, 0, 0, 0.5);
-  }
-  
-  /* Melhorar scroll interno do modal */
-  .mobile-confirmation-modal .custom-scrollbar {
-    max-height: 60vh;
-    overflow-y: auto;
-    padding-right: 0.5rem;
-  }
-  
-  /* Ajustar espaçamento dos botões no modal */
-  .mobile-confirmation-modal button {
-    min-height: 44px;
-    font-size: 14px;
-  }
-  
-  /* Texto mais compacto no modal */
-  .mobile-confirmation-modal .text-sm {
-    font-size: 13px;
-    line-height: 1.4;
-  }
-  
-  .mobile-confirmation-modal .text-xs {
-    font-size: 11px;
-    line-height: 1.3;
-  }
- }
- 
- /* Ajustes para dispositivos muito pequenos */
- @media (max-width: 360px) {
-  [data-slot="dialog-content"] {
-    width: calc(100vw - 1rem) !important;
-    margin: 0.5rem !important;
-    padding: 0.75rem !important;
-  }
-  
-  .mobile-confirmation-modal {
-    max-width: calc(100vw - 1rem);
-  }
- }
- 
- /* Ajustes para landscape em mobile */
- @media (orientation: landscape) and (max-height: 500px) {
-  [data-slot="dialog-content"] {
-    max-height: 90vh !important;
-  }
-  
-  .mobile-confirmation-modal .custom-scrollbar {
-    max-height: 50vh;
-  }
- }
- 
- /* Estilos para RadioGroup melhorados para mobile */
- @media (max-width: 768px) {
-  .mobile-checklist [role="radiogroup"] {
-    gap: 1.5rem;
-  }
-  
-  .mobile-checklist [role="radiogroup"] > div {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem 0;
-    min-height: 44px; /* Melhor área de toque */
-  }
-  
-  .mobile-checklist [role="radio"] {
-    width: 20px;
-    height: 20px;
-    border-width: 2px;
-  }
-  
-  /* Labels clicáveis maiores */
-  .mobile-checklist [role="radiogroup"] label {
-    cursor: pointer;
-    padding: 0.5rem;
-    margin: -0.5rem;
-    min-width: 44px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
- }
- 
- /* Melhorias para acessibilidade e feedback visual */
- .mobile-checklist [role="radio"]:focus {
-  outline: 2px solid oklch(var(--primary));
-  outline-offset: 2px;
- }
- 
- .mobile-checklist [role="radio"][data-state="checked"] {
-  background-color: oklch(var(--primary));
-  border-color: oklch(var(--primary));
- }
- 
- /* Animações suaves para transições */
- .mobile-checklist [role="radio"] {
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
- }
- 
- .mobile-checklist [role="radio"]:active {
-  transform: scale(0.95);
- }

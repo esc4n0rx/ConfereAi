@@ -1,5 +1,4 @@
 // lib/types.ts
-// lib/types.ts
 export interface Employee {
   id: string
   matricula: string
@@ -8,15 +7,9 @@ export interface Employee {
   is_active?: boolean
   createdAt: Date
   updatedAt: Date
-}
-
-// Manter compatibilidade com código existente
-export interface Employee {
-  id: string
+  // Compatibilidade
   name: string
   position: string
-  createdAt: Date
-  updatedAt: Date
 }
 
 export interface Equipment {
@@ -30,7 +23,6 @@ export interface Equipment {
   updatedAt: Date
 }
 
-// Novos tipos para o sistema de equipamentos
 export interface EquipmentNew {
   id: string
   nome: string
@@ -47,7 +39,7 @@ export interface ChecklistItem {
   label: string
   type: "checkbox" | "text" | "number" | "select"
   required: boolean
-  options?: string[] // For select type
+  options?: string[]
   order: number
 }
 
@@ -65,7 +57,7 @@ export interface ChecklistResponse {
   equipmentId: string
   checklistId: string
   action: "taking" | "returning"
-  responses: Record<string, any> // itemId -> response value
+  responses: Record<string, any>
   hasIssues: boolean
   notes?: string
   createdAt: Date
@@ -86,7 +78,6 @@ export type EquipmentStatus = Equipment["status"]
 export type EquipmentStatusNew = EquipmentNew["status"]
 export type ChecklistAction = ChecklistResponse["action"]
 
-// Novos tipos para API
 export interface DatabaseEmployee {
   id: string
   matricula: string
@@ -95,7 +86,6 @@ export interface DatabaseEmployee {
   is_active: boolean
   created_at: string
   updated_at: string
-  null: any
 }
 
 export interface DatabaseEquipment {
@@ -140,24 +130,6 @@ export interface UpdateEquipmentData {
   is_active?: boolean
 }
 
-// Novos tipos para Checklist Mobile
-export interface ChecklistData {
-  id: string
-  employee_id:string
-  equipment_id:string
-  codigo: string
-  employee: DatabaseEmployee
-  equipment: DatabaseEquipment
-  action: 'taking' | 'returning'
-  checklist_responses: Record<string, any>
-  observations: string | null
-  has_issues: boolean
-  device_timestamp: string
-  photos: ChecklistPhoto[]
-  created_at: string
-  updated_at: string
-}
-
 export interface ChecklistPhoto {
   id: string
   checklist_id: string
@@ -169,6 +141,8 @@ export interface ChecklistPhoto {
 export interface ChecklistData {
   id: string
   codigo: string
+  employee_id: string
+  equipment_id: string
   employee: DatabaseEmployee
   equipment: DatabaseEquipment
   action: 'taking' | 'returning'
@@ -180,8 +154,6 @@ export interface ChecklistData {
   created_at: string
   updated_at: string
 }
-
-
 
 export interface ChecklistToken {
   id: string
@@ -198,20 +170,10 @@ export interface MobileChecklistState {
   equipment: DatabaseEquipment | null
   responses: Record<string, any>
   observations: string
-  photos: File[]
+  // A propriedade 'photos' foi removida
   hasIssues: boolean
 }
 
-// Adicionar nova interface para dados de checklist estendidos
-export interface ExtendedChecklistData extends ChecklistData {
-  equipment_status: 'available' | 'maintenance'
-  is_equipment_ready: boolean
-  photos: string[]
-}
-
-// lib/types.ts (ADICIONAR ao arquivo existente)
-
-// Tipos para Managers/Encarregados
 export interface Manager {
   id: string
   nome: string
@@ -232,7 +194,6 @@ export interface UpdateManagerData {
   is_active?: boolean
 }
 
-// Tipos para Sistema de Aprovação
 export interface ChecklistApproval {
   id: string
   checklist_id: string
@@ -251,7 +212,6 @@ export interface ChecklistWithApproval extends ChecklistData {
   approval_response?: string
 }
 
-// Atualizar a interface ChecklistData existente para incluir status
 export interface ChecklistDataWithStatus extends ChecklistData {
   status: 'pending' | 'approved' | 'rejected' | 'completed'
   approval_status?: 'pending' | 'approved' | 'rejected'

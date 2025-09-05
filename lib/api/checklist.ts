@@ -4,14 +4,13 @@ import { ChecklistApprovalAPI } from './checklist-approval'
 import type { ChecklistData, ChecklistDataWithStatus, DatabaseEmployee, DatabaseEquipment } from '@/lib/types'
 
 export class ChecklistAPI {
-  static async createChecklist(data: ChecklistData & { 
+  static async createChecklist(data: Omit<ChecklistData, 'id' | 'photos' | 'created_at' | 'updated_at' | 'employee' | 'equipment'> & { 
     equipment_status: string
     is_equipment_ready: boolean 
   }): Promise<ChecklistData> {
     try {
       const supabase = createServerClient()
       
-      // Gerar código único para o checklist
       const codigo = `CHK_${Date.now()}`
       
       const { data: checklist, error } = await supabase
@@ -25,8 +24,8 @@ export class ChecklistAPI {
           observations: data.observations,
           has_issues: data.has_issues,
           device_timestamp: data.device_timestamp,
-          status: 'pending', // NOVO: Status inicial
-          approval_status: 'pending' // NOVO: Status de aprovação
+          status: 'approved', // Status inicial já é aprovado
+          approval_status: 'approved' // Status de aprovação também
         })
         .select(`
           *,
@@ -39,9 +38,9 @@ export class ChecklistAPI {
         throw new Error(error.message)
       }
 
-      // CORRIGIDO: Usar o método correto para criar solicitação de aprovação
+      // Notificar encarregados sobre o checklist já aprovado
       try {
-        await ChecklistApprovalAPI.requestApproval(
+        await ChecklistApprovalAPI.notifyManagers(
           checklist.id,
           checklist.confereai_employees.nome,
           checklist.confereai_equipments.nome,
@@ -49,10 +48,13 @@ export class ChecklistAPI {
           checklist.has_issues,
           checklist.observations
         )
-      } catch (approvalError) {
-        console.error('Erro ao criar solicitação de aprovação:', approvalError)
+      } catch (notificationError) {
+        console.error('Erro ao notificar encarregados:', notificationError)
         // Não falhar a criação do checklist se a notificação falhar
       }
+
+      // Atualizar status do equipamento
+      await this.updateEquipmentStatus(checklist.equipment_id, data.action, data.has_issues);
 
       return {
         id: checklist.id,
@@ -78,10 +80,10 @@ export class ChecklistAPI {
     try {
       const supabase = createServerClient()
       
-      // Preparar dados das fotos
       const photoData = photos.map(photo => ({
         checklist_id: checklistId,
         photo_url: photo.url,
+        photo_type: 'url', // indicando que é uma URL fictícia
         photo_order: photo.order
       }))
 
@@ -92,14 +94,41 @@ export class ChecklistAPI {
       if (error) {
         throw new Error(error.message)
       }
-
-      console.log(`${photos.length} fotos salvas para checklist ${checklistId}`)
     } catch (error) {
       console.error('Erro ao salvar fotos:', error)
       throw error
     }
   }
+  
+  static async updateEquipmentStatus(equipmentId: string, action: 'taking' | 'returning', hasIssues: boolean): Promise<void> {
+    try {
+        const supabase = createServerClient();
+        
+        let newStatus: DatabaseEquipment['status'] = 'disponivel';
+        if (action === 'taking') {
+            newStatus = 'em_uso';
+        } else if (action === 'returning') {
+            newStatus = hasIssues ? 'manutencao' : 'disponivel';
+        }
 
+        const { error } = await supabase
+            .from('confereai_equipments')
+            .update({ status: newStatus, updated_at: new Date().toISOString() })
+            .eq('id', equipmentId);
+
+        if (error) {
+            throw new Error(error.message);
+        }
+
+        console.log(`Status do equipamento ${equipmentId} atualizado para: ${newStatus}`);
+    } catch (error) {
+        console.error('Erro ao atualizar status do equipamento:', error);
+        throw error;
+    }
+}
+
+  // O restante dos métodos (getChecklistById, getAvailableEquipments, etc.) permanecem os mesmos.
+  // ... (manter o restante do código do arquivo)
   static async getChecklistById(id: string): Promise<ChecklistData | null> {
     try {
       const supabase = createServerClient()
@@ -168,23 +197,35 @@ export class ChecklistAPI {
     try {
       const supabase = createServerClient()
       
-      // Buscar equipamentos que estão em uso por este funcionário
-      // através dos checklists de retirada aprovados
+      const { data: checklists, error: checklistError } = await supabase
+        .from('confereai_checklists')
+        .select('equipment_id, action')
+        .eq('employee_id', employeeId)
+        .eq('status', 'approved');
+
+      if(checklistError) throw checklistError;
+
+      const equipmentCount = new Map<string, number>();
+      for(const checklist of checklists) {
+          const count = equipmentCount.get(checklist.equipment_id) || 0;
+          if(checklist.action === 'taking') {
+              equipmentCount.set(checklist.equipment_id, count + 1);
+          } else if (checklist.action === 'returning') {
+              equipmentCount.set(checklist.equipment_id, count - 1);
+          }
+      }
+
+      const inUseEquipmentIds = Array.from(equipmentCount.entries())
+          .filter(([, count]) => count > 0)
+          .map(([id]) => id);
+      
+      if(inUseEquipmentIds.length === 0) return [];
+
       const { data: equipments, error } = await supabase
         .from('confereai_equipments')
-        .select(`
-          *,
-          confereai_checklists!equipment_id(
-            employee_id,
-            action,
-            approval_status
-          )
-        `)
-        .eq('status', 'em_uso')
-        .eq('is_active', true)
-        .eq('confereai_checklists.employee_id', employeeId)
-        .eq('confereai_checklists.action', 'taking')
-        .eq('confereai_checklists.approval_status', 'approved')
+        .select(`*`)
+        .in('id', inUseEquipmentIds)
+        .eq('is_active', true);
 
       if (error) {
         throw new Error(error.message)
@@ -197,7 +238,6 @@ export class ChecklistAPI {
     }
   }
 
-  // NOVO MÉTODO: Buscar checklists com status de aprovação
   static async getAllChecklistsWithApproval(): Promise<ChecklistDataWithStatus[]> {
     try {
       const supabase = createServerClient()
@@ -234,28 +274,6 @@ export class ChecklistAPI {
       }))
     } catch (error) {
       console.error('Erro ao buscar checklists com aprovação:', error)
-      throw error
-    }
-  }
-
-  // NOVO MÉTODO: Atualizar status do equipamento
-  static async updateEquipmentStatus(equipmentId: string, status: string): Promise<void> {
-    try {
-      const supabase = createServerClient()
-      
-      const { error } = await supabase
-        .from('confereai_equipments')
-        .update({ 
-          status,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', equipmentId)
-
-      if (error) {
-        throw new Error(error.message)
-      }
-    } catch (error) {
-      console.error('Erro ao atualizar status do equipamento:', error)
       throw error
     }
   }
@@ -299,36 +317,28 @@ export class ChecklistAPI {
   }
 
   static async validateToken(token: string): Promise<{ valid: boolean; data?: any }> {
-  try {
-    console.log('Validando token:', token) // Debug
-    
-    const supabase = createServerClient()
-    
-    const { data: tokenData, error } = await supabase
-      .from('confereai_checklist_tokens')
-      .select('*')
-      .eq('token', token)
-      .eq('is_active', true)
-      .single()
+    try {
+      const supabase = createServerClient()
+      
+      const { data: tokenData, error } = await supabase
+        .from('confereai_checklist_tokens')
+        .select('*')
+        .eq('token', token)
+        .eq('is_active', true)
+        .single()
 
-    console.log('Resultado da busca:', { tokenData, error }) // Debug
+      if (error || !tokenData) {
+        return { valid: false }
+      }
 
-    if (error || !tokenData) {
-      console.log('Token não encontrado ou inativo') // Debug
+      if (tokenData.expires_at && new Date(tokenData.expires_at) < new Date()) {
+        return { valid: false }
+      }
+
+      return { valid: true, data: tokenData }
+    } catch (error) {
+      console.error('Erro ao validar token:', error)
       return { valid: false }
     }
-
-    // Verificar se o token não expirou
-    if (tokenData.expires_at && new Date(tokenData.expires_at) < new Date()) {
-      console.log('Token expirado') // Debug
-      return { valid: false }
-    }
-
-    console.log('Token válido') // Debug
-    return { valid: true, data: tokenData }
-  } catch (error) {
-    console.error('Erro ao validar token:', error)
-    return { valid: false }
   }
-}
 }

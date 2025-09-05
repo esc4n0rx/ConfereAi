@@ -1,48 +1,26 @@
-
+// hooks/use-checklist.ts
 import { useState, useCallback } from 'react';
-import imageCompression from 'browser-image-compression';
 import type {
   MobileChecklistState,
   DatabaseEmployee,
   DatabaseEquipment,
 } from '@/lib/types';
 
-const initialState: MobileChecklistState = {
+// Omitindo a propriedade 'photos' do estado inicial
+const initialState: Omit<MobileChecklistState, 'photos'> = {
   step: 'validation',
   employee: null,
   action: null,
   equipment: null,
   responses: {},
   observations: '',
-  photos: [],
   hasIssues: false,
 };
 
 export function useChecklist() {
-  const [state, setState] = useState<MobileChecklistState>(initialState);
+  const [state, setState] = useState(initialState);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  // --- NOVA FUNÇÃO DE COMPRESSÃO ---
-  const compressImage = async (file: File): Promise<File> => {
-    const options = {
-      maxSizeMB: 2, // Tamanho máximo do arquivo em MB
-      maxWidthOrHeight: 1920, // Redimensiona para no máximo 1920px
-      useWebWorker: true, // Usa Web Worker para não travar a UI
-    };
-    try {
-      console.log(`Tamanho original: ${(file.size / 1024 / 1024).toFixed(2)} MB`);
-      const compressedFile = await imageCompression(file, options);
-      console.log(`Tamanho comprimido: ${(compressedFile.size / 1024 / 1024).toFixed(2)} MB`);
-      return compressedFile;
-    } catch (error) {
-      console.error('Erro ao comprimir imagem:', error);
-      // Retorna o arquivo original se a compressão falhar
-      return file;
-    }
-  };
-  // --- FIM DA NOVA FUNÇÃO ---
-
 
   const setEmployee = useCallback((employee: DatabaseEmployee) => {
     setState((prev) => ({ ...prev, employee, step: 'action' }));
@@ -67,30 +45,7 @@ export function useChecklist() {
     setState((prev) => ({ ...prev, observations }));
   }, []);
 
-  // --- FUNÇÃO addPhoto ATUALIZADA ---
-  const addPhoto = useCallback(async (photo: File) => {
-    try {
-      setLoading(true); // Feedback de carregamento durante a compressão
-      const compressedPhoto = await compressImage(photo);
-      setState((prev) => ({
-        ...prev,
-        photos: [...prev.photos, compressedPhoto],
-      }));
-    } catch (err) {
-      setError("Não foi possível processar a imagem.");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-  // --- FIM DA ATUALIZAÇÃO ---
-
-
-  const removePhoto = useCallback((index: number) => {
-    setState((prev) => ({
-      ...prev,
-      photos: prev.photos.filter((_, i) => i !== index),
-    }));
-  }, []);
+  // Funções de foto removidas
 
   const toggleIssue = useCallback((hasIssues: boolean) => {
     setState((prev) => ({ ...prev, hasIssues }));
@@ -132,27 +87,6 @@ export function useChecklist() {
     return false;
   }, [validateEmployeeInternal, setEmployee]);
 
-  const convertFileToBase64 = useCallback((file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      
-      reader.onload = () => {
-        if (reader.result) {
-          const base64String = reader.result as string;
-          resolve(base64String);
-        } else {
-          reject(new Error('Erro ao ler arquivo'));
-        }
-      };
-      
-      reader.onerror = () => {
-        reject(new Error('Erro ao converter arquivo para base64'));
-      };
-      
-      reader.readAsDataURL(file);
-    });
-  }, []);
-
   const submitChecklist = useCallback(async (isEquipmentReady: boolean): Promise<boolean> => {
     if (!state.employee || !state.equipment || !state.action) {
       setError('Dados incompletos para submissão');
@@ -162,25 +96,6 @@ export function useChecklist() {
     try {
       setLoading(true);
       setError(null);
-
-      const photosBase64: string[] = [];
-      
-      console.log(`Convertendo ${state.photos.length} fotos para base64...`);
-      
-      for (let i = 0; i < state.photos.length; i++) {
-        const photo = state.photos[i];
-        
-        try {
-          const base64 = await convertFileToBase64(photo);
-          photosBase64.push(base64);
-          console.log(`Foto ${i + 1} convertida com sucesso`);
-        } catch (conversionError) {
-          console.error(`Erro ao converter foto ${i + 1}:`, conversionError);
-          throw new Error(`Erro ao processar foto ${i + 1}. Tente tirar a foto novamente.`);
-        }
-      }
-
-      console.log(`${photosBase64.length} fotos convertidas para base64`);
 
       const equipmentStatus = state.action === 'taking' 
         ? (isEquipmentReady ? 'available' : 'maintenance')
@@ -196,15 +111,12 @@ export function useChecklist() {
         observations: state.observations || null,
         has_issues: state.hasIssues,
         device_timestamp: new Date().toISOString(),
-        photos: photosBase64,
+        // Array de fotos foi removido do payload
         equipment_status: equipmentStatus,
         is_equipment_ready: isEquipmentReady,
       };
 
-      console.log('Enviando payload:', {
-        ...payload,
-        photos: `${payload.photos.length} fotos`,
-      });
+      console.log('Enviando payload:', payload);
 
       const response = await fetch('/api/checklist/submit', {
         method: 'POST',
@@ -215,23 +127,8 @@ export function useChecklist() {
       });
 
       if (!response.ok) {
-        let errorMessage = 'Erro ao submeter checklist';
-        
-        try {
-          const errorData = await response.json();
-          errorMessage = errorData.error || errorMessage;
-        } catch (parseError) {
-          console.error('Erro ao fazer parse da resposta de erro:', parseError);
-          try {
-            const errorText = await response.text();
-            console.error('Resposta de erro como texto:', errorText);
-            errorMessage = `Erro ${response.status}: ${response.statusText}`;
-          } catch (textError) {
-            console.error('Erro ao ler resposta como texto:', textError);
-          }
-        }
-        
-        throw new Error(errorMessage);
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Erro ao submeter checklist');
       }
 
       const result = await response.json();
@@ -246,7 +143,7 @@ export function useChecklist() {
     } finally {
       setLoading(false);
     }
-  }, [state, convertFileToBase64]);
+  }, [state]);
 
   const goBack = useCallback(() => {
     setState((prev) => {
@@ -262,7 +159,6 @@ export function useChecklist() {
             equipment: null,
             responses: {},
             observations: '',
-            photos: [],
             hasIssues: false,
           };
         default:
@@ -281,8 +177,7 @@ export function useChecklist() {
     setEquipment,
     updateResponse,
     updateObservations,
-    addPhoto,
-    removePhoto,
+    // addPhoto e removePhoto removidos
     toggleIssue,
     reset,
     validateEmployee,
