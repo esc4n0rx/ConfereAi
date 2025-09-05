@@ -64,6 +64,7 @@ export async function POST(request: NextRequest) {
           // Salvar as fotos no banco de dados
           if (uploadResults.length > 0) {
             await ChecklistAPI.savePhotos(checklist.id, uploadResults)
+            console.log(`${uploadResults.length} fotos salvas com sucesso para checklist ${checklist.id}`)
           }
         }
       } catch (uploadError) {
@@ -179,7 +180,7 @@ async function uploadPhotos(photosBase64: string[], checklistCode: string): Prom
         const uploadResult = await uploadResponse.json()
         console.log(`Upload da foto ${i + 1} concluído:`, uploadResult)
         
-        // Gerar URL no formato correto conforme padrão existente
+        // CORRIGIDO: Gerar URL no formato da API externa (não mais /api/photos)
         const photoUrl = `${uploadApiUrl}/files/${folderName}/${filename}`
         
         uploadResults.push({

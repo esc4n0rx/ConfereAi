@@ -1,11 +1,17 @@
-// lib/api/checklist-approval.ts (SUBSTITUIR arquivo completo)
+// lib/api/checklist-approval.ts
 import { createServerClient } from '@/lib/supabase/server'
 import { ManagersAPI } from './managers'
 import { WhatsAppAPI } from './whatsapp'
-import type { ChecklistApproval, Manager, ChecklistData } from '@/lib/types'
 
 export class ChecklistApprovalAPI {
-  static async createApprovalRequest(checklistId: string): Promise<void> {
+  static async requestApproval(
+    checklistId: string,
+    employeeName: string,
+    equipmentName: string,
+    action: 'taking' | 'returning',
+    hasIssues: boolean,
+    observations?: string
+  ): Promise<void> {
     try {
       const supabase = createServerClient()
       
@@ -13,15 +19,16 @@ export class ChecklistApprovalAPI {
       const managers = await ManagersAPI.getAllManagers()
       
       if (managers.length === 0) {
-        console.warn('Nenhum encarregado configurado para receber notificações')
-        return
+        throw new Error('Nenhum encarregado encontrado para aprovação')
       }
 
-      // Criar registros de aprovação para cada encarregado
+      // Criar registros de aprovação para todos os encarregados
       const approvals = managers.map(manager => ({
         checklist_id: checklistId,
         manager_id: manager.id,
         status: 'pending' as const,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       }))
 
       const { error } = await supabase
@@ -32,41 +39,35 @@ export class ChecklistApprovalAPI {
         throw new Error(error.message)
       }
 
-      // Buscar dados do checklist para notificação
+      // Buscar dados do checklist para envio do WhatsApp
       const { data: checklist, error: checklistError } = await supabase
         .from('confereai_checklists')
-        .select(`
-          codigo,
-          action,
-          has_issues,
-          observations,
-          confereai_employees!employee_id(nome),
-          confereai_equipments!equipment_id(nome)
-        `)
+        .select('codigo, device_timestamp')
         .eq('id', checklistId)
         .single()
 
       if (checklistError || !checklist) {
-        throw new Error('Checklist não encontrado')
+        throw new Error('Erro ao buscar dados do checklist')
       }
 
-      // Enviar notificação WhatsApp com código do checklist
-      await WhatsAppAPI.notifyChecklistSubmission(
+      // Enviar mensagem de solicitação via WhatsApp
+      await WhatsAppAPI.sendApprovalRequest(
         managers.map(m => ({ nome: m.nome, telefone: m.telefone })),
         {
           codigo: checklist.codigo,
-          employee_name: checklist.confereai_employees.nome,
-          equipment_name: checklist.confereai_equipments.nome,
-          action: checklist.action,
-          has_issues: checklist.has_issues,
-          observations: checklist.observations || undefined,
+          action,
+          employee_name: employeeName,
+          equipment_name: equipmentName,
+          has_issues: hasIssues,
+          observations,
+          device_timestamp: checklist.device_timestamp
         }
       )
 
-      console.log(`✅ Notificações enviadas para ${managers.length} encarregados - Checklist: ${checklist.codigo}`)
+      console.log(`📨 Solicitação de aprovação enviada para ${managers.length} encarregados`)
 
     } catch (error) {
-      console.error('Erro ao criar solicitação de aprovação:', error)
+      console.error('Erro ao solicitar aprovação:', error)
       throw error
     }
   }
@@ -80,73 +81,72 @@ export class ChecklistApprovalAPI {
   ): Promise<void> {
     try {
       const supabase = createServerClient()
-      
-      // Verificar se já foi aprovado/rejeitado por outro encarregado
-      const { data: existingApproval, error: checkError } = await supabase
+
+      // Verificar se a aprovação ainda está pendente
+      const { data: existingApproval, error: approvalError } = await supabase
         .from('confereai_checklist_approvals')
-        .select(`
-          status, 
-          response_source,
-          confereai_managers!manager_id(nome)
-        `)
-        .eq('checklist_id', checklistId)
-        .neq('status', 'pending')
-        .single()
-
-      if (checkError && checkError.code !== 'PGRST116') {
-        throw new Error(checkError.message)
-      }
-
-      if (existingApproval) {
-        const sourceText = existingApproval.response_source === 'whatsapp' ? 'via WhatsApp' : 'via sistema web'
-        throw new Error(
-          `Checklist já foi ${existingApproval.status === 'approved' ? 'aprovado' : 'rejeitado'} ` +
-          `por ${existingApproval.confereai_managers.nome} ${sourceText}`
-        )
-      }
-
-      // Atualizar o registro de aprovação
-      const { error: approvalError } = await supabase
-        .from('confereai_checklist_approvals')
-        .update({
-          status: approved ? 'approved' : 'rejected',
-          response_message: responseMessage,
-          response_source: responseSource,
-          responded_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        })
+        .select('*')
         .eq('checklist_id', checklistId)
         .eq('manager_id', managerId)
-
-      if (approvalError) {
-        throw new Error(approvalError.message)
-      }
-
-      // CORRIGIDO: Marcar outras aprovações pendentes como "rejected" ao invés de "superseded"
-      const { error: updateOthersError } = await supabase
-        .from('confereai_checklist_approvals')
-        .update({
-          status: 'rejected', // MUDANÇA: usar 'rejected' ao invés de 'superseded'
-          response_message: `Automaticamente rejeitado - já processado por outro encarregado`,
-          updated_at: new Date().toISOString()
-        })
-        .eq('checklist_id', checklistId)
         .eq('status', 'pending')
-        .neq('manager_id', managerId)
+        .single()
 
-      if (updateOthersError) {
-        console.warn('Aviso ao atualizar outras aprovações:', updateOthersError.message)
+      if (approvalError || !existingApproval) {
+        throw new Error('Aprovação não encontrada ou já processada')
       }
 
-      // Buscar dados do encarregado que respondeu
+      // Verificar se algum outro encarregado já respondeu
+      const { data: otherResponses, error: otherError } = await supabase
+        .from('confereai_checklist_approvals')
+        .select('*, confereai_managers!manager_id(nome)')
+        .eq('checklist_id', checklistId)
+        .neq('status', 'pending')
+
+      if (otherError) {
+        throw new Error('Erro ao verificar outras respostas')
+      }
+
+      if (otherResponses && otherResponses.length > 0) {
+        const firstResponse = otherResponses[0]
+        const wasApproved = firstResponse.status === 'approved'
+        
+        // Enviar mensagem informando que chegou tarde
+        const sourceText = responseSource === 'whatsapp' ? '📱 WhatsApp' : '💻 Sistema'
+        await WhatsAppAPI.notifyLateResponse(
+          '', // phoneNumber será obtido dentro da função se necessário
+          checklistId,
+          firstResponse.confereai_managers.nome,
+          wasApproved,
+          responseSource
+        )
+        
+        throw new Error(`Esta aprovação já foi ${wasApproved ? 'aprovada' : 'rejeitada'} por ${firstResponse.confereai_managers.nome}`)
+      }
+
+      // Buscar dados do manager
       const { data: manager, error: managerError } = await supabase
         .from('confereai_managers')
-        .select('nome, telefone')
+        .select('nome')
         .eq('id', managerId)
         .single()
 
       if (managerError || !manager) {
         throw new Error('Encarregado não encontrado')
+      }
+
+      // Atualizar a aprovação específica
+      const { error: updateError } = await supabase
+        .from('confereai_checklist_approvals')
+        .update({
+          status: approved ? 'approved' : 'rejected',
+          response_message: responseMessage,
+          responded_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', existingApproval.id)
+
+      if (updateError) {
+        throw new Error(updateError.message)
       }
 
       // Atualizar o checklist
@@ -228,12 +228,12 @@ export class ChecklistApprovalAPI {
         return
       }
       
-      // Determinar novo status do equipamento
-      let newStatus = 'available'
+      // CORRIGIDO: Determinar novo status usando valores aceitos pelo constraint
+      let newStatus = 'disponivel' // valor padrão
       if (action === 'taking') {
-        newStatus = 'in_use'
+        newStatus = 'em_uso' // mudado de 'in_use' para 'em_uso'
       } else if (action === 'returning') {
-        newStatus = 'available'
+        newStatus = 'disponivel' // mudado de 'available' para 'disponivel'
       }
 
       console.log(`📦 Atualizando equipamento ${equipmentId} para status: ${newStatus}`)
@@ -248,14 +248,15 @@ export class ChecklistApprovalAPI {
 
       if (error) {
         console.error('Erro ao atualizar status do equipamento:', error)
+        throw new Error(`Erro ao atualizar status do equipamento: ${error.message}`)
       } else {
         console.log(`✅ Status do equipamento ${equipmentId} atualizado para: ${newStatus} por ${approvedBy}`)
       }
     } catch (error) {
       console.error('Erro ao atualizar status do equipamento:', error)
+      throw error
     }
   }
-
 
   static async getPendingApprovals(): Promise<any[]> {
     try {
