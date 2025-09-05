@@ -180,7 +180,7 @@ async function uploadPhotos(photosBase64: string[], checklistCode: string): Prom
         const uploadResult = await uploadResponse.json()
         console.log(`Upload da foto ${i + 1} concluído:`, uploadResult)
         
-        const photoUrl = `${uploadApiUrl}/${folderName}/${filename}`
+        const photoUrl = `/api/photos/${folderName}/${filename}`
         
         uploadResults.push({
           url: photoUrl,
