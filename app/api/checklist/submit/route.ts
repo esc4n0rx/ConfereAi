@@ -180,8 +180,7 @@ async function uploadPhotos(photosBase64: string[], checklistCode: string): Prom
         const uploadResult = await uploadResponse.json()
         console.log(`Upload da foto ${i + 1} concluído:`, uploadResult)
         
-        // CORRIGIDO: Gerar URL no formato da API externa (não mais /api/photos)
-        const photoUrl = `${uploadApiUrl}/files/${folderName}/${filename}`
+        const photoUrl = `${uploadApiUrl}/${folderName}/${filename}`
         
         uploadResults.push({
           url: photoUrl,

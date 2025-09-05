@@ -4,6 +4,9 @@ import { ManagersAPI } from './managers'
 import { WhatsAppAPI } from './whatsapp'
 
 export class ChecklistApprovalAPI {
+  /**
+   * MÉTODO CORRIGIDO: requestApproval (usado pelo ChecklistAPI)
+   */
   static async requestApproval(
     checklistId: string,
     employeeName: string,
@@ -68,6 +71,47 @@ export class ChecklistApprovalAPI {
 
     } catch (error) {
       console.error('Erro ao solicitar aprovação:', error)
+      throw error
+    }
+  }
+
+  /**
+   * MÉTODO ALTERNATIVO: createApprovalRequest (para compatibilidade)
+   */
+  static async createApprovalRequest(checklistId: string): Promise<void> {
+    try {
+      const supabase = createServerClient()
+      
+      // Buscar dados do checklist
+      const { data: checklist, error: checklistError } = await supabase
+        .from('confereai_checklists')
+        .select(`
+          codigo,
+          action,
+          has_issues,
+          observations,
+          confereai_employees!employee_id(nome),
+          confereai_equipments!equipment_id(nome)
+        `)
+        .eq('id', checklistId)
+        .single()
+
+      if (checklistError || !checklist) {
+        throw new Error('Erro ao buscar dados do checklist')
+      }
+
+      // Chamar o método principal
+      await this.requestApproval(
+        checklistId,
+        checklist.confereai_employees.nome,
+        checklist.confereai_equipments.nome,
+        checklist.action,
+        checklist.has_issues,
+        checklist.observations
+      )
+
+    } catch (error) {
+      console.error('Erro ao criar solicitação de aprovação:', error)
       throw error
     }
   }

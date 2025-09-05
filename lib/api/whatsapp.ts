@@ -76,16 +76,17 @@ export class WhatsAppAPI {
     }
   }
 
-  // MÉTODO ATUALIZADO: Incluir código e usar botões/opções
-  static async notifyChecklistSubmission(
+  // MÉTODO CORRIGIDO: sendApprovalRequest
+  static async sendApprovalRequest(
     managers: { nome: string; telefone: string }[],
     checklist: {
       codigo: string
+      action: 'taking' | 'returning'
       employee_name: string
       equipment_name: string
-      action: 'taking' | 'returning'
       has_issues: boolean
       observations?: string
+      device_timestamp: string
     }
   ): Promise<void> {
     const actionText = checklist.action === 'taking' ? 'RETIRADA' : 'DEVOLUÇÃO'
@@ -114,154 +115,173 @@ export class WhatsAppAPI {
     await Promise.allSettled(promises)
   }
 
-  static async notifyApprovalResponse(
+  // MÉTODO ALTERNATIVO: notifyChecklistSubmission (para compatibilidade)
+  static async notifyChecklistSubmission(
     managers: { nome: string; telefone: string }[],
-    approvedBy: string,
     checklist: {
       codigo: string
       employee_name: string
       equipment_name: string
       action: 'taking' | 'returning'
-    },
-    approved: boolean
+      has_issues: boolean
+      observations?: string
+    }
   ): Promise<void> {
-    const actionText = checklist.action === 'taking' ? 'retirada' : 'devolução'
-    const statusText = approved ? 'APROVADA' : 'REJEITADA'
-    const icon = approved ? '✅' : '❌'
-    
-    const message = `${icon} CHECKLIST ${statusText}\n\n`
-      + `📋 Código: ${checklist.codigo}\n`
-      + `👤 Funcionário: ${checklist.employee_name}\n`
-      + `📦 Equipamento: ${checklist.equipment_name}\n`
-      + `🎯 Ação: ${actionText}\n`
-      + `👨‍💼 ${statusText} por: ${approvedBy}\n\n`
-      + `ℹ️ Não é necessário responder mais.`
-
-    const promises = managers
-      .filter(manager => manager.nome !== approvedBy)
-      .map(manager => this.sendMessage(manager.telefone, message))
-
-    await Promise.allSettled(promises)
+    // Chamar o método principal
+    await this.sendApprovalRequest(managers, {
+      ...checklist,
+      device_timestamp: new Date().toISOString()
+    })
   }
 
-  // NOVO MÉTODO: Notificar quando alguém tenta responder após decisão já tomada
-  static async notifyLateResponse(
-    phoneNumber: string,
-    checklistCode: string,
-    alreadyApprovedBy: string,
-    wasApproved: boolean,
-    responseSource: 'web' | 'whatsapp' = 'whatsapp'
-  ): Promise<void> {
-    const statusText = wasApproved ? 'APROVADO' : 'REJEITADO'
-    const icon = wasApproved ? '✅' : '❌'
-    const sourceText = responseSource === 'whatsapp' ? '📱 WhatsApp' : '💻 Sistema'
-    
-    const message = `⚠️ RESPOSTA NÃO PROCESSADA\n\n`
-      + `📋 Código: ${checklistCode}\n`
-      + `${icon} Já foi ${statusText} por: ${alreadyApprovedBy}\n`
-      + `📍 Respondido via: ${sourceText}\n\n`
-      + `ℹ️ Sua resposta chegou após a decisão já ter sido tomada.`
+  static async notifyApprovalResponse(
+   managers: { nome: string; telefone: string }[],
+   approvedBy: string,
+   checklist: {
+     codigo: string
+     employee_name: string
+     equipment_name: string
+     action: 'taking' | 'returning'
+   },
+   approved: boolean
+ ): Promise<void> {
+   const actionText = checklist.action === 'taking' ? 'retirada' : 'devolução'
+   const statusText = approved ? 'APROVADA' : 'REJEITADA'
+   const icon = approved ? '✅' : '❌'
+   
+   const message = `${icon} CHECKLIST ${statusText}\n\n`
+     + `📋 Código: ${checklist.codigo}\n`
+     + `👤 Funcionário: ${checklist.employee_name}\n`
+     + `📦 Equipamento: ${checklist.equipment_name}\n`
+     + `🎯 Ação: ${actionText}\n`
+     + `👨‍💼 ${statusText} por: ${approvedBy}\n\n`
+     + `ℹ️ Não é necessário responder mais.`
 
-    try {
-      await this.sendMessage(phoneNumber, message)
-      console.log(`📱 Notificação de resposta tardia enviada para: ${phoneNumber}`)
-    } catch (error) {
-      console.error('Erro ao enviar notificação de resposta tardia:', error)
-    }
-  }
+   const promises = managers
+     .filter(manager => manager.nome !== approvedBy)
+     .map(manager => this.sendMessage(manager.telefone, message))
 
-  // NOVO MÉTODO: Enviar mensagem de confirmação quando resposta é aceita
-  static async sendConfirmationMessage(
-    phoneNumber: string,
-    checklistCode: string,
-    approved: boolean,
-    managerName: string
-  ): Promise<void> {
-    const statusText = approved ? 'APROVAÇÃO' : 'REJEIÇÃO'
-    const icon = approved ? '✅' : '❌'
-    
-    const message = `${icon} ${statusText} REGISTRADA\n\n`
-      + `📋 Código: ${checklistCode}\n`
-      + `👨‍💼 Por: ${managerName}\n`
-      + `⏰ Em: ${new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}\n\n`
-      + `✅ Sua decisão foi processada com sucesso!`
+   await Promise.allSettled(promises)
+ }
 
-    try {
-      await this.sendMessage(phoneNumber, message)
-      console.log(`📱 Confirmação enviada para: ${phoneNumber} - ${statusText}`)
-    } catch (error) {
-      console.error('Erro ao enviar confirmação:', error)
-    }
-  }
+ // NOVO MÉTODO: Notificar quando alguém tenta responder após decisão já tomada
+ static async notifyLateResponse(
+   phoneNumber: string,
+   checklistCode: string,
+   alreadyApprovedBy: string,
+   wasApproved: boolean,
+   responseSource: 'web' | 'whatsapp' = 'whatsapp'
+ ): Promise<void> {
+   const statusText = wasApproved ? 'APROVADO' : 'REJEITADO'
+   const icon = wasApproved ? '✅' : '❌'
+   const sourceText = responseSource === 'whatsapp' ? '📱 WhatsApp' : '💻 Sistema'
+   
+   const message = `⚠️ RESPOSTA NÃO PROCESSADA\n\n`
+     + `📋 Código: ${checklistCode}\n`
+     + `${icon} Já foi ${statusText} por: ${alreadyApprovedBy}\n`
+     + `📍 Respondido via: ${sourceText}\n\n`
+     + `ℹ️ Sua resposta chegou após a decisão já ter sido tomada.`
 
-  // NOVO MÉTODO: Testar conectividade com a API do WhatsApp
-  static async testConnection(): Promise<{ success: boolean; message: string }> {
-    try {
-      const { url, token } = this.getConfig()
-      
-      const response = await fetch(`${url}/`, {
-        method: 'GET',
-        headers: {
-          'x-api-key': token,
-        },
-      })
+   try {
+     await this.sendMessage(phoneNumber, message)
+     console.log(`📱 Notificação de resposta tardia enviada para: ${phoneNumber}`)
+   } catch (error) {
+     console.error('Erro ao enviar notificação de resposta tardia:', error)
+   }
+ }
 
-      if (response.ok) {
-        const result = await response.json()
-        return {
-          success: true,
-          message: `Conectado com sucesso. Status: ${result.status || 'OK'}`
-        }
-      } else {
-        return {
-          success: false,
-          message: `Erro na conexão: ${response.status}`
-        }
-      }
-    } catch (error: any) {
-      return {
-        success: false,
-        message: `Erro de conectividade: ${error.message}`
-      }
-    }
-  }
+ // NOVO MÉTODO: Enviar mensagem de confirmação quando resposta é aceita
+ static async sendConfirmationMessage(
+   phoneNumber: string,
+   checklistCode: string,
+   approved: boolean,
+   managerName: string
+ ): Promise<void> {
+   const statusText = approved ? 'APROVAÇÃO' : 'REJEIÇÃO'
+   const icon = approved ? '✅' : '❌'
+   
+   const message = `${icon} ${statusText} REGISTRADA\n\n`
+     + `📋 Código: ${checklistCode}\n`
+     + `👨‍💼 Por: ${managerName}\n`
+     + `⏰ Em: ${new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}\n\n`
+     + `✅ Sua decisão foi processada com sucesso!`
 
-  // NOVO MÉTODO: Obter status do bot
-  static async getBotStatus(): Promise<{
-    success: boolean
-    isReady: boolean
-    message: string
-  }> {
-    try {
-      const { url, token } = this.getConfig()
-      
-      const response = await fetch(`${url}/`, {
-        method: 'GET',
-        headers: {
-          'x-api-key': token,
-        },
-      })
+   try {
+     await this.sendMessage(phoneNumber, message)
+     console.log(`📱 Confirmação enviada para: ${phoneNumber} - ${statusText}`)
+   } catch (error) {
+     console.error('Erro ao enviar confirmação:', error)
+   }
+ }
 
-      if (response.ok) {
-        const result = await response.json()
-        return {
-          success: true,
-          isReady: result.status?.includes('Conectado') || false,
-          message: result.status || 'Status desconhecido'
-        }
-      } else {
-        return {
-          success: false,
-          isReady: false,
-          message: `Erro ao verificar status: ${response.status}`
-        }
-      }
-    } catch (error: any) {
-      return {
-        success: false,
-        isReady: false,
-        message: `Erro de conectividade: ${error.message}`
-      }
-    }
-  }
+ // NOVO MÉTODO: Testar conectividade com a API do WhatsApp
+ static async testConnection(): Promise<{ success: boolean; message: string }> {
+   try {
+     const { url, token } = this.getConfig()
+     
+     const response = await fetch(`${url}/`, {
+       method: 'GET',
+       headers: {
+         'x-api-key': token,
+       },
+     })
+
+     if (response.ok) {
+       const result = await response.json()
+       return {
+         success: true,
+         message: `Conectado com sucesso. Status: ${result.status || 'OK'}`
+       }
+     } else {
+       return {
+         success: false,
+         message: `Erro na conexão: ${response.status}`
+       }
+     }
+   } catch (error: any) {
+     return {
+       success: false,
+       message: `Erro de conectividade: ${error.message}`
+     }
+   }
+ }
+
+ // NOVO MÉTODO: Obter status do bot
+ static async getBotStatus(): Promise<{
+   success: boolean
+   isReady: boolean
+   message: string
+ }> {
+   try {
+     const { url, token } = this.getConfig()
+     
+     const response = await fetch(`${url}/`, {
+       method: 'GET',
+       headers: {
+         'x-api-key': token,
+       },
+     })
+
+     if (response.ok) {
+       const result = await response.json()
+       return {
+         success: true,
+         isReady: result.status?.includes('Conectado') || false,
+         message: result.status || 'Status desconhecido'
+       }
+     } else {
+       return {
+         success: false,
+         isReady: false,
+         message: `Erro ao verificar status: ${response.status}`
+       }
+     }
+   } catch (error: any) {
+     return {
+       success: false,
+       isReady: false,
+       message: `Erro de conectividade: ${error.message}`
+     }
+   }
+ }
 }
