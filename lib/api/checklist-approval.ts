@@ -71,22 +71,6 @@ export class ChecklistApprovalAPI {
     }
   }
 
-  Perfeito! Agora o bot está funcionando, mas temos 2 erros no processamento da aprovação. Vamos corrigi-los:
-🔍 Análise dos Erros
-Erro 1: Check constraint confereai_checklist_approvals_status_check
-
-O banco não aceita o status 'superseded' que estamos tentando inserir
-Precisa ajustar a constraint ou usar status válido
-
-Erro 2: UUID inválido "undefined"
-
-Estamos passando undefined como equipment_id na atualização do equipamento
-Precisa buscar o equipment_id corretamente
-
-🛠️ Correções Necessárias
-1. Corrigir o ChecklistApprovalAPI (lib/api/checklist-approval.ts)
-typescript// lib/api/checklist-approval.ts (CORRIGIR o método processApprovalResponse)
-export class ChecklistApprovalAPI {
   static async processApprovalResponse(
     checklistId: string,
     managerId: string,

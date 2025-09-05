@@ -49,6 +49,33 @@ export class ChecklistAPI {
     }
   }
 
+  static async savePhotos(checklistId: string, photos: Array<{url: string, order: number}>): Promise<void> {
+    try {
+      const supabase = createServerClient()
+      
+      const photoData = photos.map(photo => ({
+        checklist_id: checklistId,
+        photo_url: photo.url,
+        photo_order: photo.order,
+        uploaded_at: new Date().toISOString()
+      }))
+
+      const { error } = await supabase
+        .from('confereai_checklist_photos')
+        .insert(photoData)
+
+      if (error) {
+        console.error('Erro ao salvar fotos no banco:', error)
+        throw new Error(`Erro ao salvar fotos: ${error.message}`)
+      }
+
+      console.log(`${photos.length} fotos salvas com sucesso para checklist ${checklistId}`)
+    } catch (error) {
+      console.error('Erro ao salvar fotos:', error)
+      throw error
+    }
+  }
+
   static async validateToken(token: string): Promise<{ valid: boolean }> {
     try {
       const supabase = createServerClient()
