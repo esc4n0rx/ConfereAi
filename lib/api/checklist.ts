@@ -299,29 +299,35 @@ export class ChecklistAPI {
   }
 
   static async validateToken(token: string): Promise<{ valid: boolean; data?: any }> {
-    try {
-      const supabase = createServerClient()
-      
-      const { data: tokenData, error } = await supabase
-        .from('confereai_tokens')
-        .select('*')
-        .eq('token', token)
-        .eq('is_active', true)
-        .single()
+  try {
+    console.log('Validando token:', token) // Debug
+    
+    const supabase = createServerClient()
+    
+    const { data: tokenData, error } = await supabase
+      .from('confereai_checklist_tokens')
+      .select('*')
+      .eq('token', token)
+      .eq('is_active', true)
+      .single()
 
-      if (error || !tokenData) {
-        return { valid: false }
-      }
+    console.log('Resultado da busca:', { tokenData, error }) // Debug
 
-      // Verificar se o token não expirou
-      if (tokenData.expires_at && new Date(tokenData.expires_at) < new Date()) {
-        return { valid: false }
-      }
-
-      return { valid: true, data: tokenData }
-    } catch (error) {
-      console.error('Erro ao validar token:', error)
+    if (error || !tokenData) {
+      console.log('Token não encontrado ou inativo') // Debug
       return { valid: false }
     }
+
+    // Verificar se o token não expirou
+    if (tokenData.expires_at && new Date(tokenData.expires_at) < new Date()) {
+      console.log('Token expirado') // Debug
+      return { valid: false }
+    }
+
+    console.log('Token válido') // Debug
+    return { valid: true, data: tokenData }
+  } catch (error) {
+    console.error('Erro ao validar token:', error)
+    return { valid: false }
   }
 }
